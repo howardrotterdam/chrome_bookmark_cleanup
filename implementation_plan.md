@@ -1,77 +1,70 @@
-# Chrome Bookmark Cleanup CLI Tool
+# Implementation Plan - Chrome Bookmark Cleanup Updates
 
-This tool will parse Chrome's Netscape-format HTML bookmark files, clean duplicate entries, merge bookmarks with identical URLs but different names, delete empty folders recursively, and output the result in HTML, JSON, CSV, or TSV.
+We will enhance the `chrome-bookmark-cleanup` CLI tool to support saving removed duplicates and printing execution statistics.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Resolution of Same-URL-Different-Names (Grouping & Positioning)**:
-> When multiple bookmarks have the same URL but different names, the tool will:
-> 1. Find the newest bookmark based on its `ADD_DATE` (defaulting to 0 if missing).
-> 2. Determine its parent folder (the target folder).
-> 3. Move all bookmarks with this URL to that target folder.
-> 4. Position them consecutively at the index of the newest bookmark in the target folder, sorted by their `ADD_DATE` ascending.
+> **Duplicates File Suffix and Formatting**:
+> - The removed duplicates will be written to a file with the same format as the main output, named with suffix `-dups` inserted before the file extension.
+> - Example: If output path is `/path/to/cleaned.json`, the duplicates file will be `/path/to/cleaned-dups.json`.
+> - If `--output` is not specified (output is written to stdout), the duplicates will be saved to a file named `<input_filename_base>-dups.<format>` in the current directory.
 >
-> Please verify if this ordering and placement approach aligns with your expectations.
+> **Statistics Logging**:
+> - Statistics will be logged to `sys.stderr` in a human-readable format.
+> - This keeps `stdout` clean for pipelining/redirecting outputs.
 
 ## Proposed Changes
 
-### Configuration and Packaging
-
-#### [NEW] [pyproject.toml](file:///Users/hwang/github/ChromeBookmarkCleanup/pyproject.toml)
-Defines project metadata and dependencies. Configures the command-line entry point `chrome-bookmark-cleanup`.
-
----
-
 ### Core Module
 
-#### [NEW] [__init__.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/__init__.py)
-Package initialization.
+#### [MODIFY] [cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/cleanup.py)
+Update to:
+- Return a list of removed duplicate nodes along with their original folder paths.
+- Calculate and return statistics including:
+  - Input bookmark count
+  - Output bookmark count
+  - Duplicate bookmarks removed
+  - Same-URL bookmarks merged (moved)
+  - Empty folders removed
 
-#### [NEW] [parser.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/parser.py)
-Implements:
-- `BookmarkNode` representing bookmark files, folders, and bookmarks in a tree structure.
-- `BookmarkParser` subclass of `html.parser.HTMLParser` to parse Netscape HTML bookmark format.
-- `writer` module / function to serialize the `BookmarkNode` tree back into Chrome-compatible HTML.
-
-#### [NEW] [cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/cleanup.py)
-Implements:
-- Duplicate detection (exact name + URL matches, keeping the newest one).
-- Grouping/moving of bookmarks with same URL but different names to the newest one's folder.
-- Recursive deletion of empty folders.
-
-#### [NEW] [main.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/main.py)
-Implements CLI parsing with `argparse`, output format routing (HTML, JSON, CSV, TSV), and file writing.
+#### [MODIFY] [main.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/main.py)
+Update to:
+- Accept output formatting for the removed duplicates list.
+- Determine the duplicates file path (by appending `-dups`).
+- Save the duplicates in the same format.
+- Output statistics to `sys.stderr`.
 
 ---
 
 ### Tests
 
-#### [NEW] [conftest.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/conftest.py)
-Shared pytest fixtures, including sample bookmark files.
+#### [MODIFY] [test_cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cleanup.py)
+Add assertions checking the statistics return values and the list of returned duplicates.
 
-#### [NEW] [test_parser.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_parser.py)
-Unit tests for HTML bookmark parsing and generation.
+#### [MODIFY] [test_cli.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cli.py)
+Update integration tests to verify the generation of the `-dups` files and check stderr statistics output.
 
-#### [NEW] [test_cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cleanup.py)
-Unit tests verifying duplicate removal, same-URL movement, and empty folder deletion.
+---
 
-#### [NEW] [test_cli.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cli.py)
-Integration tests running the CLI command with various flags (`--format json`, `--format csv`, etc.) and verifying output formats.
+### Documentation
+
+#### [MODIFY] [README.md](file:///Users/hwang/github/ChromeBookmarkCleanup/README.md)
+Update the README to thoroughly detail:
+- Purpose and features of the tool.
+- Installation and build instructions.
+- CLI usage, options, and output examples.
+- Running unit and integration tests.
 
 ## Verification Plan
 
 ### Automated Tests
-We will install the package in editable mode and run pytest:
+Run pytest:
 ```bash
-pip install -e .
 pytest -v
 ```
 
 ### Manual Verification
-1. Create a dummy bookmark file with duplicates, nested folders, empty folders, and same-URL/different-name items.
-2. Run the CLI tool:
-   ```bash
-   chrome-bookmark-cleanup path/to/input.html -o path/to/output.html
-   ```
-3. Inspect output structures for HTML, JSON, and CSV formats.
+1. Run CLI tool on a test file.
+2. Confirm the `-dups` file is generated next to the output file (or created in the CWD if stdout is used).
+3. Confirm that statistics are printed to `stderr`.

@@ -1,32 +1,23 @@
-# Walkthrough - Chrome Bookmark Cleanup
+# Walkthrough - Chrome Bookmark Cleanup Updates
 
-We have successfully implemented and tested the `chrome-bookmark-cleanup` tool. Below is a summary of the implementation and validation results.
+We have successfully updated the `chrome-bookmark-cleanup` tool to write removed duplicates to a separate file and log execution statistics to `sys.stderr`.
 
 ## Changes Made
 
-1. **Packaging & Config**:
-   - Created [pyproject.toml](file:///Users/hwang/github/ChromeBookmarkCleanup/pyproject.toml) to configure package metadata, dependencies, and set up the `chrome-bookmark-cleanup` command line entry point.
-   - Created [__init__.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/__init__.py).
+1. **Cleanup Module (`cleanup.py`)**:
+   - Enhanced `remove_duplicates` and `merge_same_urls` to track original folder paths for duplicates and capture stats.
+   - Refactored `cleanup_bookmarks` to return the cleaned tree root, a list of removed duplicate nodes with original folder paths, and a dictionary of statistics.
 
-2. **Parser Module**:
-   - Created [parser.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/parser.py) implementing a custom `BookmarkParser` subclass of Python's standard `html.parser.HTMLParser` to parse the Netscape HTML bookmark format.
-   - Built a custom `serialize_to_html` writer to output valid, clean, and properly escaped Chrome HTML bookmarks.
+2. **CLI Module (`main.py`)**:
+   - Added support to serialize duplicate entries into HTML, JSON, CSV, and TSV formats.
+   - Implemented automatic file path calculation for the duplicates file using the suffix `-dups` (placed next to the output file, or next to the input file if writing to stdout).
+   - Formatted and printed detailed statistics to `sys.stderr`.
 
-3. **Cleanup Logic**:
-   - Created [cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/cleanup.py) implementing:
-     - Exact duplicate bookmark removal (matching names + URLs, keeping the newest bookmark by `ADD_DATE`).
-     - Same-URL-different-name bookmark grouping. This moves both to the newest bookmark's folder, positioned next to each other in chronological order.
-     - Recursive deletion of empty folders.
+3. **Documentation (`README.md`)**:
+   - Created a comprehensive `README.md` file covering the purpose, features, installation, usage, options, statistics logs, and running tests.
 
-4. **CLI Entrypoint**:
-   - Created [main.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/main.py) which handles CLI arguments via `argparse`, implements flat structure converters for JSON/CSV/TSV, and writes output to stdout or a file.
-
-5. **Tests**:
-   - Added a pytest suite under [tests/](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/):
-     - [conftest.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/conftest.py) for sample inputs.
-     - [test_parser.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_parser.py) for parsing/escaping/serialization tests.
-     - [test_cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cleanup.py) for cleanup pipeline verification.
-     - [test_cli.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cli.py) for format outputs (HTML, JSON, CSV, TSV) and error handling.
+4. **Testing Suite**:
+   - Updated `tests/test_cleanup.py` and `tests/test_cli.py` to assert correct signatures, correct stats, and check that `-dups` files are properly created next to the output/input paths.
 
 ## Verification Results
 
@@ -50,31 +41,19 @@ tests/test_cli.py::test_cli_invalid_input PASSED                         [ 83%]
 tests/test_parser.py::test_parse_simple_structure PASSED                 [ 91%]
 tests/test_parser.py::test_serialization PASSED                          [100%]
 
-============================== 12 passed in 0.03s ==============================
+============================== 12 passed in 0.05s ==============================
 ```
 
-### Manual CLI Test
-Verified the entrypoint and JSON formatting works perfectly:
+### Manual CLI Test (Module Run)
+Successfully ran the module and captured statistics on stderr, writing output files next to the source file:
 ```bash
-$ chrome-bookmark-cleanup test_input.html -f json
-[
-  {
-    "folder": "Bookmarks bar/Folder A",
-    "name": "Google Search",
-    "url": "https://google.com",
-    "add_date": 1610000000
-  },
-  {
-    "folder": "Bookmarks bar/Folder A",
-    "name": "Google",
-    "url": "https://google.com",
-    "add_date": 1610000003
-  },
-  {
-    "folder": "Bookmarks bar/Folder B",
-    "name": "Yahoo",
-    "url": "https://yahoo.com",
-    "add_date": 1610000006
-  }
-]
+$ python3 -m chrome_bookmark_cleanup.main test_input.html -o test_output.html
+=== Chrome Bookmark Cleanup Statistics ===
+Total Bookmarks Input:       4
+Total Bookmarks Output:      3
+Duplicate Bookmarks Removed: 1
+Same-URL Bookmarks Merged:   1
+Empty Folders Removed:       2
+==========================================
 ```
+Both `test_output.html` and `test_output-dups.html` were created with correct formats and elements.

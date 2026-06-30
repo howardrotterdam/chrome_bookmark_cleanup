@@ -1,0 +1,24 @@
+# Tasks - Chrome Bookmark Cleanup CLI
+
+- [x] Create package and configuration files
+    - [x] Create `pyproject.toml`
+    - [x] Create `chrome_bookmark_cleanup/__init__.py`
+- [x] Implement Netscape bookmark parser & writer (`chrome_bookmark_cleanup/parser.py`)
+    - [x] Define `BookmarkNode`
+    - [x] Implement `BookmarkParser` using `html.parser.HTMLParser`
+    - [x] Implement `writer` to output Chrome-compliant HTML
+- [x] Update core cleanup logic (`chrome_bookmark_cleanup/cleanup.py`)
+    - [x] Return list of removed duplicate nodes along with original folder paths
+    - [x] Calculate and return counts (duplicates removed, same-URL merged, empty folders removed)
+- [x] Update CLI script (`chrome_bookmark_cleanup/main.py`)
+    - [x] Add formatting/serialization of duplicates list to HTML/JSON/CSV/TSV
+    - [x] Determine duplicates output filename (`-dups`) and write it
+    - [x] Format and print execution statistics to `sys.stderr`
+- [x] Update Test suite (`tests/`)
+    - [x] Update unit tests to verify cleanup return values & stats
+    - [x] Update CLI integration tests to verify `-dups` file creation and stderr outputs
+- [x] Update documentation (`README.md`)
+    - [x] Detail purpose, features, usage, build, and test steps
+- [x] Verify everything passes
+    - [x] Run pytest
+    - [x] Run manual verification
