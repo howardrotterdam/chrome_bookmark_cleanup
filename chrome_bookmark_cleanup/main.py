@@ -5,17 +5,9 @@ import json
 import os
 import sys
 
-from chrome_bookmark_cleanup.parser import parse_bookmarks_html, serialize_to_html
+from chrome_bookmark_cleanup.parser import parse_bookmarks_html, serialize_to_html, BookmarkNode
 from chrome_bookmark_cleanup.cleanup import cleanup_bookmarks, get_add_date, get_url
 
-# Helper to flatten the bookmarks list (redefined here for convenience if needed,
-# or we can define it in cleanup.py and import it).
-# Let's import it from cleanup.py, but since it wasn't defined there yet, let's write it in cleanup.py
-# or define it here. Defining it in cleanup.py is cleaner, but let's double check.
-# Actually, let's look at cleanup.py: it doesn't have flatten_bookmarks yet. Let's define it here
-# or append/modify cleanup.py. Let's define it here to keep things simple, or in cleanup.py.
-# Actually, let's write it here, or modify cleanup.py to include it.
-# Defining it in main.py is perfectly fine since it's formatting-related.
 def flatten_bookmarks(node, current_path=None):
     """Recursively flattens a BookmarkNode tree into a list of bookmark dictionaries."""
     if current_path is None:
@@ -57,6 +49,44 @@ def serialize_to_json(bookmarks):
     return json.dumps(bookmarks, indent=2, ensure_ascii=False) + '\n'
 
 
+def serialize_duplicates(removed_duplicates, output_format):
+    """Serializes the removed duplicates list according to the specified output format."""
+    if output_format == "html":
+        root = BookmarkNode(is_folder=True, title="Root")
+        dups_folder = BookmarkNode(is_folder=True, title="Removed Duplicates")
+        dups_folder.children = [b for b, path in removed_duplicates]
+        root.children = [dups_folder]
+        return serialize_to_html(root)
+    else:
+        flat_dups = []
+        for b, path in removed_duplicates:
+            folder_str = "/".join(path)
+            flat_dups.append({
+                "folder": folder_str,
+                "name": b.title,
+                "url": get_url(b),
+                "add_date": get_add_date(b)
+            })
+        if output_format == "json":
+            return serialize_to_json(flat_dups)
+        elif output_format == "csv":
+            return serialize_to_csv(flat_dups, delimiter=',')
+        elif output_format == "tsv":
+            return serialize_to_csv(flat_dups, delimiter='\t')
+    return ""
+
+
+def get_dups_output_path(output_path, input_path, output_format):
+    """Determines the duplicates output file path based on suffix rules."""
+    if output_path:
+        base, ext = os.path.splitext(output_path)
+        return f"{base}-dups{ext}"
+    else:
+        base, _ = os.path.splitext(input_path)
+        ext = f".{output_format}"
+        return f"{base}-dups{ext}"
+
+
 def main(args=None):
     parser = argparse.ArgumentParser(
         description="Clean up Chrome bookmark export HTML files by removing duplicates and empty folders."
@@ -96,9 +126,9 @@ def main(args=None):
         return 1
 
     # Execute cleanup pipeline
-    cleanup_bookmarks(root)
+    root, removed_duplicates, stats = cleanup_bookmarks(root)
 
-    # Format output
+    # Format main output
     if parsed_args.format == "html":
         output_content = serialize_to_html(root)
     else:
@@ -113,7 +143,11 @@ def main(args=None):
             print(f"Error: Unknown format '{parsed_args.format}'", file=sys.stderr)
             return 1
 
-    # Write output
+    # Format and serialize duplicates output
+    dups_content = serialize_duplicates(removed_duplicates, parsed_args.format)
+    dups_path = get_dups_output_path(parsed_args.output, parsed_args.input_file, parsed_args.format)
+
+    # Write main output
     if parsed_args.output:
         try:
             with open(parsed_args.output, 'w', encoding='utf-8') as f:
@@ -123,6 +157,23 @@ def main(args=None):
             return 1
     else:
         sys.stdout.write(output_content)
+
+    # Write duplicates output
+    try:
+        with open(dups_path, 'w', encoding='utf-8') as f:
+            f.write(dups_content)
+    except Exception as e:
+        print(f"Error writing duplicates file: {e}", file=sys.stderr)
+        return 1
+
+    # Log statistics to stderr
+    sys.stderr.write("=== Chrome Bookmark Cleanup Statistics ===\n")
+    sys.stderr.write(f"Total Bookmarks Input:       {stats['input_bookmarks']}\n")
+    sys.stderr.write(f"Total Bookmarks Output:      {stats['output_bookmarks']}\n")
+    sys.stderr.write(f"Duplicate Bookmarks Removed: {stats['duplicates_removed']}\n")
+    sys.stderr.write(f"Same-URL Bookmarks Merged:   {stats['same_url_merged']}\n")
+    sys.stderr.write(f"Empty Folders Removed:       {stats['empty_folders_removed']}\n")
+    sys.stderr.write("==========================================\n")
 
     return 0
 

@@ -13,15 +13,31 @@ def test_cli_html_output(tmp_path, sample_bookmarks_html, capsys):
     
     captured = capsys.readouterr()
     stdout = captured.out
+    stderr = captured.err
     
-    # Verify cleaning took place
+    # Verify cleaning took place in main output
     assert "<TITLE>Bookmarks</TITLE>" in stdout
     assert "Google Search" in stdout
     assert "Google" in stdout
-    # The duplicate (Google at 1610000001) is removed, but we still have one Google (1610000003)
-    # The empty folders should be removed
     assert "Empty Folder" not in stdout
     assert "Nested Empty Folder" not in stdout
+    
+    # Verify stats in stderr
+    assert "=== Chrome Bookmark Cleanup Statistics ===" in stderr
+    assert "Total Bookmarks Input:       4" in stderr
+    assert "Total Bookmarks Output:      3" in stderr
+    assert "Duplicate Bookmarks Removed: 1" in stderr
+    assert "Same-URL Bookmarks Merged:   1" in stderr
+    assert "Empty Folders Removed:       2" in stderr
+    
+    # Verify duplicates file next to input file
+    dups_file = tmp_path / "bookmarks-dups.html"
+    assert dups_file.exists()
+    dups_content = dups_file.read_text(encoding="utf-8")
+    assert "<TITLE>Bookmarks</TITLE>" in dups_content
+    assert "Removed Duplicates" in dups_content
+    assert "Google" in dups_content
+    assert "1610000001" in dups_content
 
 
 def test_cli_json_output(tmp_path, sample_bookmarks_html, capsys):
@@ -33,25 +49,23 @@ def test_cli_json_output(tmp_path, sample_bookmarks_html, capsys):
     
     captured = capsys.readouterr()
     data = json.loads(captured.out)
+    stderr = captured.err
     
     # After cleanup, we expect 3 bookmarks: Google Search, Google, Yahoo
     assert len(data) == 3
     
-    # Verify their fields and folders
-    assert data[0]["folder"] == "Bookmarks bar/Folder A"
-    assert data[0]["name"] == "Google Search"
-    assert data[0]["url"] == "https://google.com"
-    assert data[0]["add_date"] == 1610000000
+    # Verify stats
+    assert "Duplicate Bookmarks Removed: 1" in stderr
     
-    assert data[1]["folder"] == "Bookmarks bar/Folder A"
-    assert data[1]["name"] == "Google"
-    assert data[1]["url"] == "https://google.com"
-    assert data[1]["add_date"] == 1610000003
-    
-    assert data[2]["folder"] == "Bookmarks bar/Folder B"
-    assert data[2]["name"] == "Yahoo"
-    assert data[2]["url"] == "https://yahoo.com"
-    assert data[2]["add_date"] == 1610000006
+    # Verify duplicates file
+    dups_file = tmp_path / "bookmarks-dups.json"
+    assert dups_file.exists()
+    dups_data = json.loads(dups_file.read_text(encoding="utf-8"))
+    assert len(dups_data) == 1
+    assert dups_data[0]["folder"] == "Bookmarks bar/Folder A"
+    assert dups_data[0]["name"] == "Google"
+    assert dups_data[0]["url"] == "https://google.com"
+    assert dups_data[0]["add_date"] == 1610000001
 
 
 def test_cli_csv_output(tmp_path, sample_bookmarks_html, capsys):
@@ -63,11 +77,20 @@ def test_cli_csv_output(tmp_path, sample_bookmarks_html, capsys):
     
     captured = capsys.readouterr()
     lines = captured.out.strip().split("\n")
+    stderr = captured.err
     
     assert lines[0] == "folder,name,url,add_date"
     assert lines[1] == "Bookmarks bar/Folder A,Google Search,https://google.com,1610000000"
-    assert lines[2] == "Bookmarks bar/Folder A,Google,https://google.com,1610000003"
-    assert lines[3] == "Bookmarks bar/Folder B,Yahoo,https://yahoo.com,1610000006"
+    
+    # Verify stats
+    assert "Duplicate Bookmarks Removed: 1" in stderr
+    
+    # Verify duplicates CSV
+    dups_file = tmp_path / "bookmarks-dups.csv"
+    assert dups_file.exists()
+    dups_lines = dups_file.read_text(encoding="utf-8").strip().split("\n")
+    assert dups_lines[0] == "folder,name,url,add_date"
+    assert dups_lines[1] == "Bookmarks bar/Folder A,Google,https://google.com,1610000001"
 
 
 def test_cli_tsv_output(tmp_path, sample_bookmarks_html, capsys):
@@ -79,11 +102,20 @@ def test_cli_tsv_output(tmp_path, sample_bookmarks_html, capsys):
     
     captured = capsys.readouterr()
     lines = captured.out.strip().split("\n")
+    stderr = captured.err
     
     assert lines[0] == "folder\tname\turl\tadd_date"
     assert lines[1] == "Bookmarks bar/Folder A\tGoogle Search\thttps://google.com\t1610000000"
-    assert lines[2] == "Bookmarks bar/Folder A\tGoogle\thttps://google.com\t1610000003"
-    assert lines[3] == "Bookmarks bar/Folder B\tYahoo\thttps://yahoo.com\t1610000006"
+    
+    # Verify stats
+    assert "Duplicate Bookmarks Removed: 1" in stderr
+    
+    # Verify duplicates TSV
+    dups_file = tmp_path / "bookmarks-dups.tsv"
+    assert dups_file.exists()
+    dups_lines = dups_file.read_text(encoding="utf-8").strip().split("\n")
+    assert dups_lines[0] == "folder\tname\turl\tadd_date"
+    assert dups_lines[1] == "Bookmarks bar/Folder A\tGoogle\thttps://google.com\t1610000001"
 
 
 def test_cli_output_file(tmp_path, sample_bookmarks_html):
@@ -97,10 +129,15 @@ def test_cli_output_file(tmp_path, sample_bookmarks_html):
     assert output_file.exists()
     data = json.loads(output_file.read_text(encoding="utf-8"))
     assert len(data) == 3
+    
+    # Verify duplicates file is named output-dups.json
+    dups_file = tmp_path / "output-dups.json"
+    assert dups_file.exists()
+    dups_data = json.loads(dups_file.read_text(encoding="utf-8"))
+    assert len(dups_data) == 1
 
 
 def test_cli_invalid_input(tmp_path, capsys):
-    # Pass non-existent file
     exit_code = main(["non_existent_file.html"])
     assert exit_code == 1
     

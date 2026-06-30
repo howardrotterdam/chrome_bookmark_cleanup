@@ -7,8 +7,6 @@ def get_add_date(node):
     if val is None:
         return 0
     try:
-        # Some export files might store timestamp in microseconds, some in seconds.
-        # We can just convert to integer for comparison.
         return int(val)
     except ValueError:
         return 0
@@ -33,8 +31,53 @@ def collect_bookmarks_with_parents(node):
     return bookmarks
 
 
-def remove_duplicates(root):
-    """1. Removes exact duplicate bookmarks (same URL and name, keeping the newest)."""
+def build_parent_map(node, parent_map=None):
+    """Builds a map from nodes to their parent folders."""
+    if parent_map is None:
+        parent_map = {}
+    if node.is_folder:
+        for child in node.children:
+            parent_map[child] = node
+            build_parent_map(child, parent_map)
+    return parent_map
+
+
+def get_folder_path(parent_node, parent_map):
+    """Reconstructs the folder path list from a parent map (excluding the dummy Root)."""
+    path = []
+    curr = parent_node
+    while curr and curr.title != "Root":
+        path.append(curr.title)
+        curr = parent_map.get(curr)
+    return list(reversed(path))
+
+
+def count_folders(node):
+    """Counts the total number of folders in the tree (excluding Root)."""
+    count = 0
+    if node.is_folder:
+        if node.title != "Root":
+            count += 1
+        for child in node.children:
+            count += count_folders(child)
+    return count
+
+
+def count_bookmarks(node):
+    """Counts the total number of bookmarks in the tree."""
+    count = 0
+    if node.is_folder:
+        for child in node.children:
+            count += count_bookmarks(child)
+    else:
+        count += 1
+    return count
+
+
+def remove_duplicates(root, parent_map):
+    """1. Removes exact duplicate bookmarks (same URL and name, keeping the newest).
+    Returns a list of tuples (removed_bookmark_node, original_folder_path_list).
+    """
     bookmarks = collect_bookmarks_with_parents(root)
     
     # Group by (url, name)
@@ -43,6 +86,7 @@ def remove_duplicates(root):
         url = get_url(b)
         groups[(url, b.title)].append((b, parent))
         
+    removed_duplicates = []
     for (url, name), items in groups.items():
         if len(items) > 1:
             # Sort by add_date descending
@@ -51,11 +95,15 @@ def remove_duplicates(root):
             for dup_b, parent in items[1:]:
                 if dup_b in parent.children:
                     parent.children.remove(dup_b)
+                    folder_path = get_folder_path(parent, parent_map)
+                    removed_duplicates.append((dup_b, folder_path))
+    return removed_duplicates
 
 
 def merge_same_urls(root):
     """2. If URLs are the same but names are different, move both to the same folder
     where the newer bookmark is located, and store them next to each other.
+    Returns the number of same-URL bookmarks merged (moved).
     """
     bookmarks = collect_bookmarks_with_parents(root)
     
@@ -66,6 +114,7 @@ def merge_same_urls(root):
         if url: # Only process valid URLs
             groups[url].append((b, parent))
             
+    merged_count = 0
     for url, items in groups.items():
         if len(items) > 1:
             # Find the newest bookmark in the group based on add_date
@@ -91,6 +140,9 @@ def merge_same_urls(root):
                 idx = target_folder.children.index(newest_b)
                 # Insert them right before the newest bookmark
                 target_folder.children[idx:idx] = other_nodes
+                merged_count += len(others_to_move)
+                
+    return merged_count
 
 
 def remove_empty_folders(node):
@@ -111,8 +163,30 @@ def remove_empty_folders(node):
 
 
 def cleanup_bookmarks(root):
-    """Executes the entire cleanup pipeline on the bookmark tree."""
-    remove_duplicates(root)
-    merge_same_urls(root)
+    """Executes the entire cleanup pipeline on the bookmark tree.
+    Returns (cleaned_root, removed_duplicates, stats).
+    """
+    # Build parent map and count metrics before cleanup
+    parent_map = build_parent_map(root)
+    folders_before = count_folders(root)
+    bookmarks_before = count_bookmarks(root)
+    
+    # Run cleanup steps
+    removed_duplicates = remove_duplicates(root, parent_map)
+    same_url_merged = merge_same_urls(root)
     remove_empty_folders(root)
-    return root
+    
+    # Count metrics after cleanup
+    folders_after = count_folders(root)
+    bookmarks_after = count_bookmarks(root)
+    empty_folders_removed = folders_before - folders_after
+    
+    stats = {
+        "input_bookmarks": bookmarks_before,
+        "output_bookmarks": bookmarks_after,
+        "duplicates_removed": len(removed_duplicates),
+        "same_url_merged": same_url_merged,
+        "empty_folders_removed": empty_folders_removed
+    }
+    
+    return root, removed_duplicates, stats
