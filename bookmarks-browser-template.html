@@ -66,16 +66,21 @@
         position: relative;
     }
 
-    /* Folder Container Layout */
-    .folder-header-container {
+    /* Inline Elements Container Layout */
+    .folder-header-container, .bookmark-item-container {
         display: inline-flex;
         align-items: center;
-        background-color: #e9ecef;
         border-radius: 4px;
+    }
+    .folder-header-container {
+        background-color: #e9ecef;
         padding-right: 6px;
     }
     .folder-header-container:hover {
         background-color: #dee2e6;
+    }
+    .bookmark-item-container:hover {
+        background-color: #e8f0fe;
     }
 
     /* Folder Typography & Collapsible Mechanics */
@@ -100,7 +105,7 @@
         transition: transform 0.15s ease;
     }
 
-    /* Inline Branch & Path Controls Styling */
+    /* Action Controls Styling */
     .branch-btn, .path-btn {
         font-size: 11px;
         font-family: monospace;
@@ -123,6 +128,16 @@
     .path-btn {
         color: #0d6efd;
     }
+    
+    /* Bookmark-specific path spacing adjustments */
+    .bookmark-item-container .path-btn {
+        margin-left: 8px;
+        opacity: 0.4;
+        transition: opacity 0.15s ease;
+    }
+    .bookmark-item-container:hover .path-btn {
+        opacity: 1;
+    }
 
     /* Collapsed State Styles */
     .collapsed > .folder-header-container h3::before {
@@ -136,12 +151,11 @@
     dt a {
         color: #0d6efd;
         text-decoration: none;
-        padding: 2px 6px;
+        padding: 4px 6px;
         border-radius: 3px;
         display: inline-block;
     }
     dt a:hover {
-        background-color: #e7f1ff;
         text-decoration: underline;
     }
 
@@ -160,7 +174,7 @@
         padding: 20px;
         border-radius: 6px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        max-width: 600px;
+        max-width: 700px;
         width: 90%;
     }
     .path-modal-title {
@@ -192,7 +206,7 @@
         modalOverlay.className = "path-modal-overlay";
         modalOverlay.innerHTML = `
             <div class="path-modal-box">
-                <div class="path-modal-title">Folder Lineage Path:</div>
+                <div class="path-modal-title">Lineage Path:</div>
                 <div class="path-input-group">
                     <input type="text" class="path-display-input" readonly>
                     <button class="global-btn" id="modal-copy-btn" style="padding:4px 12px; margin:0;">Copy</button>
@@ -244,9 +258,33 @@
             });
         }
 
-        // 3. Scan and inject inline branch actions and path tool configurations
+        // Shared function to calculate paths back to the top root node
+        function showPath(element, leafText) {
+            let pathSegments = [];
+            let currentElement = element.closest("dt");
+
+            // Handle leaf node if specified (the bookmark title itself)
+            if (leafText) {
+                pathSegments.unshift(leafText.trim());
+            }
+
+            // Step upward through the parent elements to extract folder lineage titles
+            while (currentElement) {
+                const parentH3 = currentElement.querySelector(":scope > .folder-header-container > h3, :scope > h3");
+                if (parentH3) {
+                    pathSegments.unshift(parentH3.textContent.trim());
+                }
+                currentElement = currentElement.parentElement ? currentElement.parentElement.closest("dt") : null;
+            }
+
+            // Join array values without spacing flags using Unix '/' notation
+            modalInput.value = pathSegments.join("/");
+            modalOverlay.style.display = "flex";
+            modalInput.select();
+        }
+
+        // 3. Configure folder headers [H3]
         const folders = document.querySelectorAll("dt h3");
-        
         folders.forEach(h3 => {
             const parentDT = h3.parentElement;
             
@@ -268,7 +306,7 @@
             const pathBtn = document.createElement("span");
             pathBtn.className = "path-btn";
             pathBtn.innerText = "[path]";
-            pathBtn.title = "Show and copy full folder path lineage";
+            pathBtn.title = "Show and copy full folder path";
 
             container.appendChild(expandBtn);
             container.appendChild(collapseBtn);
@@ -294,33 +332,36 @@
                 parentDT.classList.add("collapsed");
             });
 
-            // 4. Path Resolution Lineage Logic
             pathBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
-                
-                let pathSegments = [];
-                let currentElement = parentDT;
-
-                // Walk upward through HTML DOM tree finding ancestor <DT> elements containing <H3> tags
-                while (currentElement) {
-                    const localH3 = currentElement.querySelector(":scope > .folder-header-container > h3, :scope > h3");
-                    if (localH3) {
-                        pathSegments.unshift(localH3.textContent.trim());
-                    }
-                    // Jump to parent elements up the structural DOM ladder
-                    currentElement = currentElement.parentElement ? currentElement.parentElement.closest("dt") : null;
-                }
-
-                const fullPathString = pathSegments.join(" > ");
-                modalInput.value = fullPathString;
-                modalOverlay.style.display = "flex";
-                
-                // Instantly auto-focus and highlight the text field for fast manual copying if preferred
-                modalInput.select();
+                showPath(parentDT, null);
             });
         });
 
-        // Force links to target blank
-        document.querySelectorAll("dt a").forEach(a => a.setAttribute("target", "_blank"));
+        // 4. Configure individual bookmark links [A]
+        const links = document.querySelectorAll("dt a");
+        links.forEach(a => {
+            a.setAttribute("target", "_blank"); // Open links in a new tab
+            
+            const parentDT = a.parentElement;
+            
+            // Setup visual wrapper block to avoid layout break
+            const container = document.createElement("span");
+            container.className = "bookmark-item-container";
+            parentDT.insertBefore(container, a);
+            container.appendChild(a);
+
+            const pathBtn = document.createElement("span");
+            pathBtn.className = "path-btn";
+            pathBtn.innerText = "[path]";
+            pathBtn.title = "Show and copy full bookmark lineage path";
+
+            container.appendChild(pathBtn);
+
+            pathBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                showPath(parentDT, a.textContent);
+            });
+        });
     });
 </script>
