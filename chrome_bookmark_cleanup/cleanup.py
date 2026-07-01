@@ -2,14 +2,25 @@ from collections import defaultdict
 from chrome_bookmark_cleanup.parser import BookmarkNode
 
 def get_add_date(node):
-    """Safely gets the ADD_DATE attribute of a node as an integer."""
+    """Safely gets the ADD_DATE attribute of a node as an integer,
+    normalized to seconds since Epoch (handling milliseconds/microseconds).
+    """
     val = node.attrs.get('add_date') or node.attrs.get('ADD_DATE')
     if val is None:
         return 0
     try:
-        return int(val)
+        ts = int(val)
     except ValueError:
         return 0
+        
+    # Coerce/normalize timestamp to seconds
+    if ts > 100000000000:
+        if ts > 100000000000000:
+            ts = ts // 1000000
+        elif ts > 100000000000:
+            ts = ts // 1000
+            
+    return ts
 
 
 def get_url(node):
@@ -339,12 +350,6 @@ def sort_and_restructure_node(target_folder):
         new_year_folders = []
         for b in direct_bookmarks:
             ts = get_add_date(b)
-            # Normalize timestamp
-            if ts > 100000000000:
-                if ts > 100000000000000:
-                    ts = ts // 1000000
-                elif ts > 100000000000:
-                    ts = ts // 1000
             try:
                 dt = datetime.fromtimestamp(ts, tz=timezone.utc)
             except (ValueError, OSError, OverflowError):

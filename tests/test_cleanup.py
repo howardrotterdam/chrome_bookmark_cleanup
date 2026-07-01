@@ -254,3 +254,24 @@ def test_sort_multiple_matching_folders():
     assert folder_a2.children[0].title == "A"
     assert folder_a2.children[1].title == "B"
 
+
+def test_remove_duplicates_precision_mismatch():
+    from chrome_bookmark_cleanup.cleanup import cleanup_bookmarks
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+    <DT><H3>Bookmarks bar</H3>
+    <DL><p>
+        <DT><A HREF="https://google.com" ADD_DATE="1610000000000000">Google</A>
+        <DT><A HREF="https://google.com" ADD_DATE="1610000005">Google</A>
+    </DL><p>
+</DL><p>
+"""
+    root = parse_bookmarks_html(html)
+    root, removed_duplicates, stats = cleanup_bookmarks(root)
+    
+    bookmarks_bar = root.children[0]
+    assert len(bookmarks_bar.children) == 1
+    assert bookmarks_bar.children[0].attrs["add_date"] == "1610000005"
+    assert len(removed_duplicates) == 1
+    assert removed_duplicates[0][0].attrs["add_date"] == "1610000000000000"
+
