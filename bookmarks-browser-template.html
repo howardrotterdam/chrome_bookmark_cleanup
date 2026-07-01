@@ -57,7 +57,7 @@
         transition: border-color 0.2s;
     }
     dl dl:hover {
-        border-left-color: #495057; /* Darkens line when hovering over a section */
+        border-left-color: #495057;
     }
 
     dt {
@@ -100,8 +100,8 @@
         transition: transform 0.15s ease;
     }
 
-    /* Inline Branch Controls Styling */
-    .branch-btn {
+    /* Inline Branch & Path Controls Styling */
+    .branch-btn, .path-btn {
         font-size: 11px;
         font-family: monospace;
         font-weight: bold;
@@ -115,10 +115,13 @@
         user-select: none;
         line-height: 1;
     }
-    .branch-btn:hover {
+    .branch-btn:hover, .path-btn:hover {
         background-color: #212529;
         color: #fff;
         border-color: #212529;
+    }
+    .path-btn {
+        color: #0d6efd;
     }
 
     /* Collapsed State Styles */
@@ -141,11 +144,80 @@
         background-color: #e7f1ff;
         text-decoration: underline;
     }
+
+    /* Custom Path Modal Popup Panel */
+    .path-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    }
+    .path-modal-box {
+        background: white;
+        padding: 20px;
+        border-radius: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        max-width: 600px;
+        width: 90%;
+    }
+    .path-modal-title {
+        font-weight: bold;
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: #495057;
+    }
+    .path-input-group {
+        display: flex;
+        gap: 8px;
+    }
+    .path-display-input {
+        flex-grow: 1;
+        padding: 6px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        background: #f8f9fa;
+    }
 </style>
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        // 1. Create and inject the Global Sticky Top Toolbar right after the main H1 heading
+        // 1. Setup the Path Modal Popup elements in the DOM base
+        const modalOverlay = document.createElement("div");
+        modalOverlay.className = "path-modal-overlay";
+        modalOverlay.innerHTML = `
+            <div class="path-modal-box">
+                <div class="path-modal-title">Folder Lineage Path:</div>
+                <div class="path-input-group">
+                    <input type="text" class="path-display-input" readonly>
+                    <button class="global-btn" id="modal-copy-btn" style="padding:4px 12px; margin:0;">Copy</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalOverlay);
+
+        const modalInput = modalOverlay.querySelector(".path-display-input");
+        const modalCopyBtn = modalOverlay.querySelector("#modal-copy-btn");
+
+        // Close modal when clicking outside the box
+        modalOverlay.addEventListener("click", (e) => {
+            if (e.target === modalOverlay) modalOverlay.style.display = "none";
+        });
+
+        modalCopyBtn.addEventListener("click", () => {
+            modalInput.select();
+            document.execCommand("copy");
+            modalCopyBtn.innerText = "Copied!";
+            setTimeout(() => { modalCopyBtn.innerText = "Copy"; }, 1500);
+        });
+
+
+        // 2. Create and inject the Global Sticky Top Toolbar
         const mainHeading = document.querySelector("h1");
         if (mainHeading) {
             const toolbar = document.createElement("div");
@@ -163,7 +235,6 @@
             toolbar.appendChild(collapseAllBtn);
             mainHeading.insertAdjacentElement("afterend", toolbar);
 
-            // Global Control Event Listeners
             expandAllBtn.addEventListener("click", () => {
                 document.querySelectorAll("dt").forEach(dt => dt.classList.remove("collapsed"));
             });
@@ -173,7 +244,7 @@
             });
         }
 
-        // 2. Scan and inject inline branch actions [+] / [-]
+        // 3. Scan and inject inline branch actions and path tool configurations
         const folders = document.querySelectorAll("dt h3");
         
         folders.forEach(h3 => {
@@ -194,8 +265,14 @@
             collapseBtn.innerText = "[-]";
             collapseBtn.title = "Collapse all subfolders here";
 
+            const pathBtn = document.createElement("span");
+            pathBtn.className = "path-btn";
+            pathBtn.innerText = "[path]";
+            pathBtn.title = "Show and copy full folder path lineage";
+
             container.appendChild(expandBtn);
             container.appendChild(collapseBtn);
+            container.appendChild(pathBtn);
             
             h3.addEventListener("click", (e) => {
                 parentDT.classList.toggle("collapsed");
@@ -215,6 +292,31 @@
                     childDT.classList.add("collapsed");
                 });
                 parentDT.classList.add("collapsed");
+            });
+
+            // 4. Path Resolution Lineage Logic
+            pathBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                
+                let pathSegments = [];
+                let currentElement = parentDT;
+
+                // Walk upward through HTML DOM tree finding ancestor <DT> elements containing <H3> tags
+                while (currentElement) {
+                    const localH3 = currentElement.querySelector(":scope > .folder-header-container > h3, :scope > h3");
+                    if (localH3) {
+                        pathSegments.unshift(localH3.textContent.trim());
+                    }
+                    // Jump to parent elements up the structural DOM ladder
+                    currentElement = currentElement.parentElement ? currentElement.parentElement.closest("dt") : null;
+                }
+
+                const fullPathString = pathSegments.join(" > ");
+                modalInput.value = fullPathString;
+                modalOverlay.style.display = "flex";
+                
+                // Instantly auto-focus and highlight the text field for fast manual copying if preferred
+                modalInput.select();
             });
         });
 
