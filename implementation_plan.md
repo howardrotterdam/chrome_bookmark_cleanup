@@ -1,70 +1,70 @@
-# Implementation Plan - Chrome Bookmark Cleanup Updates
+# Implementation Plan - Folder Sorting with Pinyin Order
 
-We will enhance the `chrome-bookmark-cleanup` CLI tool to support saving removed duplicates and printing execution statistics.
+We will add a CLI option `--sort <folder_path_or_name>` to restructure and sort a specific folder's bookmarks.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Duplicates File Suffix and Formatting**:
-> - The removed duplicates will be written to a file with the same format as the main output, named with suffix `-dups` inserted before the file extension.
-> - Example: If output path is `/path/to/cleaned.json`, the duplicates file will be `/path/to/cleaned-dups.json`.
-> - If `--output` is not specified (output is written to stdout), the duplicates will be saved to a file named `<input_filename_base>-dups.<format>` in the current directory.
+> **External Dependency**:
+> We will add `pypinyin` to our package dependencies. This is the industry-standard library in Python for converting Chinese text to Pinyin to enable accurate sorting.
 >
-> **Statistics Logging**:
-> - Statistics will be logged to `sys.stderr` in a human-readable format.
-> - This keeps `stdout` clean for pipelining/redirecting outputs.
+> **Folder RESTructure ('yyyy/yymmdd')**:
+> For the target folder:
+> 1. All bookmarks inside the target folder (including subfolders) will be extracted.
+> 2. They will be regrouped into nested folders `yyyy` (e.g. `2026`) and `yymmdd` (e.g. `260701`) based on their `ADD_DATE` (UTC).
+> 3. Old empty subfolders under the target folder will be pruned.
+> 4. In each `yymmdd` folder, bookmarks will be sorted alphabetically. Chinese titles will be sorted by Pinyin using case-insensitive comparison.
 
 ## Proposed Changes
+
+### Configuration and Packaging
+
+#### [MODIFY] [pyproject.toml](file:///Users/hwang/github/ChromeBookmarkCleanup/pyproject.toml)
+Add `pypinyin` to package dependencies:
+```toml
+dependencies = [
+    "pypinyin>=0.40.0",
+]
+```
+
+---
 
 ### Core Module
 
 #### [MODIFY] [cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/cleanup.py)
-Update to:
-- Return a list of removed duplicate nodes along with their original folder paths.
-- Calculate and return statistics including:
-  - Input bookmark count
-  - Output bookmark count
-  - Duplicate bookmarks removed
-  - Same-URL bookmarks merged (moved)
-  - Empty folders removed
+Add:
+- `find_folder(node, target_path)`: Find a folder by name or path.
+- `collect_bookmarks_recursive(node)`: Extract all bookmark nodes under a given folder recursively.
+- `sort_and_restructure_folder(root, target_path)`:
+  - Find the folder.
+  - Gather and extract all bookmarks.
+  - Create the new `yyyy/yymmdd` structure.
+  - Sort bookmarks alphabetically (supporting Pinyin for Chinese text).
+  - Sort the year and date folders chronologically.
 
 #### [MODIFY] [main.py](file:///Users/hwang/github/ChromeBookmarkCleanup/chrome_bookmark_cleanup/main.py)
-Update to:
-- Accept output formatting for the removed duplicates list.
-- Determine the duplicates file path (by appending `-dups`).
-- Save the duplicates in the same format.
-- Output statistics to `sys.stderr`.
+- Add `--sort` option to `argparse`.
+- Invoke the sorting/restructuring function before running the cleanup pipeline.
 
 ---
 
 ### Tests
 
 #### [MODIFY] [test_cleanup.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cleanup.py)
-Add assertions checking the statistics return values and the list of returned duplicates.
+Add tests to verify:
+- Sorting by Pinyin of mixed English/Chinese text.
+- Restructuring folders under `--sort`.
 
 #### [MODIFY] [test_cli.py](file:///Users/hwang/github/ChromeBookmarkCleanup/tests/test_cli.py)
-Update integration tests to verify the generation of the `-dups` files and check stderr statistics output.
-
----
-
-### Documentation
-
-#### [MODIFY] [README.md](file:///Users/hwang/github/ChromeBookmarkCleanup/README.md)
-Update the README to thoroughly detail:
-- Purpose and features of the tool.
-- Installation and build instructions.
-- CLI usage, options, and output examples.
-- Running unit and integration tests.
+Add a test running the CLI with `--sort` on a sample bookmarks file and verifying the output structure.
 
 ## Verification Plan
 
 ### Automated Tests
-Run pytest:
+Run:
 ```bash
 pytest -v
 ```
 
 ### Manual Verification
-1. Run CLI tool on a test file.
-2. Confirm the `-dups` file is generated next to the output file (or created in the CWD if stdout is used).
-3. Confirm that statistics are printed to `stderr`.
+Create a bookmark file with a folder containing mixed English/Chinese bookmarks with different dates, sort it using `chrome-bookmark-cleanup --sort "Folder A"`, and verify that the HTML output has the correct `yyyy/yymmdd` folder nesting and correct sorting.

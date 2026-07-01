@@ -19,6 +19,7 @@ there is no fine control based on bookmark name or add date.
 4. **Flexible Output Formats**: Supports outputting results in standard Chrome HTML format (suitable for immediate re-importing), JSON lists, CSV, or TSV formats.
 5. **Removed Duplicates Log**: Automatically saves the removed duplicate entries to a separate file (e.g., `bookmarks-dups.html` or `bookmarks-dups.json`) next to the output file using the same format.
 6. **Execution Statistics**: Prints detailed summaries of changes (input/output counts, duplicate count, merged count, pruned folder count) directly to `sys.stderr`.
+7. **Folder Restructuring & Sorting**: Restructures a specified bookmark folder (and subfolders) recursively into date-based subfolders (`yyyy/yymmdd`) based on each bookmark's `ADD_DATE`. Under the same date folder, bookmarks are sorted alphabetically. Chinese titles are sorted by case-insensitive Pinyin order.
 
 ## Installation & Build
 
@@ -44,6 +45,7 @@ chrome-bookmark-cleanup <input_file> [options]
 
 - `-o`, `--output <path>`: Path to write the cleaned bookmarks. If not specified, writes to standard output.
 - `-f`, `--format <html|json|csv|tsv>`: Output format (default is `html`).
+- `--sort <folder_path_or_name>`: Specify a folder path (e.g., `"Bookmarks bar/My Folder"`) or a folder title to restructure and sort.
 - `-h`, `--help`: Show usage and help.
 
 ### Examples
@@ -65,6 +67,12 @@ chrome-bookmark-cleanup bookmarks.html -o cleaned.json -f json
 chrome-bookmark-cleanup bookmarks.html -f csv > cleaned.csv
 ```
 *Note: This will output CSV content to stdout and write the duplicates to `bookmarks-dups.csv` next to `bookmarks.html`.*
+
+**Clean, restructure, and sort bookmarks in a specific folder:**
+```bash
+chrome-bookmark-cleanup bookmarks.html -o cleaned.html --sort "Bookmarks bar/Folder A"
+```
+*Note: This will restructure all bookmarks inside "Folder A" recursively into "yyyy/yymmdd" subfolders and sort them alphabetically with Chinese text in Pinyin order.*
 
 ### Statistics Output Example
 

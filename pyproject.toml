@@ -14,7 +14,9 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = []
+dependencies = [
+    "pypinyin>=0.40.0",
+]
 
 [project.optional-dependencies]
 test = [

@@ -6,7 +6,7 @@ import os
 import sys
 
 from chrome_bookmark_cleanup.parser import parse_bookmarks_html, serialize_to_html, BookmarkNode
-from chrome_bookmark_cleanup.cleanup import cleanup_bookmarks, get_add_date, get_url
+from chrome_bookmark_cleanup.cleanup import cleanup_bookmarks, get_add_date, get_url, sort_and_restructure_folder
 
 def flatten_bookmarks(node, current_path=None):
     """Recursively flattens a BookmarkNode tree into a list of bookmark dictionaries."""
@@ -105,6 +105,10 @@ def main(args=None):
         default="html",
         help="Output format (default: html)."
     )
+    parser.add_argument(
+        "--sort",
+        help="Specify a bookmark folder name or path to be restructured and sorted into yyyy/yymmdd folders."
+    )
 
     parsed_args = parser.parse_args(args)
 
@@ -124,6 +128,13 @@ def main(args=None):
     except Exception as e:
         print(f"Error parsing bookmarks: {e}", file=sys.stderr)
         return 1
+
+    if parsed_args.sort:
+        try:
+            sort_and_restructure_folder(root, parsed_args.sort)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
 
     # Execute cleanup pipeline
     root, removed_duplicates, stats = cleanup_bookmarks(root)

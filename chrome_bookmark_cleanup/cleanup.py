@@ -190,3 +190,118 @@ def cleanup_bookmarks(root):
     }
     
     return root, removed_duplicates, stats
+
+
+def find_folder(node, target_path, current_path=None):
+    """Recursively finds a folder by its exact path (joined by '/') or its folder title.
+    Returns the BookmarkNode if found, or None.
+    """
+    if current_path is None:
+        current_path = []
+        
+    if not node.is_folder:
+        return None
+        
+    path_str = "/".join(current_path)
+    if node.title != "Root":
+        if path_str == target_path or node.title == target_path:
+            return node
+            
+    for child in node.children:
+        if child.is_folder:
+            res = find_folder(child, target_path, current_path + [child.title])
+            if res is not None:
+                return res
+    return None
+
+
+def collect_bookmarks_recursive(node):
+    """Collects all bookmarks (non-folder nodes) recursively under a given node."""
+    bookmarks = []
+    if node.is_folder:
+        for child in node.children:
+            bookmarks.extend(collect_bookmarks_recursive(child))
+    else:
+        bookmarks.append(node)
+    return bookmarks
+
+
+def sort_and_restructure_folder(root, target_path):
+    """Finds the folder by target_path under root, extracts all bookmarks,
+    re-organizes them into yyyy/yymmdd folders, and sorts them alphabetically
+    (Pinyin sorting for Chinese characters).
+    """
+    from datetime import datetime, timezone
+    target_folder = find_folder(root, target_path)
+    if not target_folder:
+        raise ValueError(f"Bookmark folder '{target_path}' not found.")
+        
+    # Gather all bookmarks recursively
+    bookmarks = collect_bookmarks_recursive(target_folder)
+    
+    # Clear target folder children completely
+    target_folder.children = []
+    
+    # Restructure into yyyy/yymmdd
+    for b in bookmarks:
+        ts = get_add_date(b)
+        
+        # Coerce/normalize timestamp to seconds
+        if ts > 100000000000:
+            if ts > 100000000000000:
+                ts = ts // 1000000
+            elif ts > 100000000000:
+                ts = ts // 1000
+                
+        try:
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        except (ValueError, OSError, OverflowError):
+            dt = datetime.fromtimestamp(0, tz=timezone.utc)
+            
+        yyyy = dt.strftime('%Y')
+        yymmdd = dt.strftime('%y%m%d')
+        
+        # Find or create year folder
+        year_folder = None
+        for child in target_folder.children:
+            if child.is_folder and child.title == yyyy:
+                year_folder = child
+                break
+        if year_folder is None:
+            year_folder = BookmarkNode(is_folder=True, title=yyyy, attrs={"add_date": str(ts)})
+            target_folder.children.append(year_folder)
+            
+        # Find or create date folder
+        date_folder = None
+        for child in year_folder.children:
+            if child.is_folder and child.title == yymmdd:
+                date_folder = child
+                break
+        if date_folder is None:
+            date_folder = BookmarkNode(is_folder=True, title=yymmdd, attrs={"add_date": str(ts)})
+            year_folder.children.append(date_folder)
+            
+        date_folder.children.append(b)
+        
+    # Sort year folders chronologically
+    target_folder.children.sort(key=lambda x: x.title)
+    
+    # Sort date folders chronologically
+    for year_folder in target_folder.children:
+        year_folder.children.sort(key=lambda x: x.title)
+        
+        # Sort bookmarks inside each date folder alphabetically & Pinyin for Chinese
+        for date_folder in year_folder.children:
+            try:
+                from pypinyin import lazy_pinyin
+                def sort_key(b):
+                    title_str = str(b.title or "")
+                    pinyin_list = lazy_pinyin(title_str)
+                    key = [p.lower() for p in pinyin_list]
+                    return (key, title_str.lower())
+            except ImportError:
+                def sort_key(b):
+                    title_str = str(b.title or "")
+                    return (title_str.lower(), title_str)
+                    
+            date_folder.children.sort(key=sort_key)

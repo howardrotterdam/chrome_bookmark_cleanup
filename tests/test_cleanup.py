@@ -103,3 +103,38 @@ def test_full_cleanup_pipeline(sample_bookmarks_html):
     assert stats["duplicates_removed"] == 1
     assert stats["same_url_merged"] == 1
     assert stats["empty_folders_removed"] == 2
+
+
+def test_sort_and_restructure_folder():
+    from chrome_bookmark_cleanup.cleanup import sort_and_restructure_folder
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+    <DT><H3>Folder A</H3>
+    <DL><p>
+        <DT><A HREF="https://google.com" ADD_DATE="1610000000">谷歌</A>
+        <DT><A HREF="https://baidu.com" ADD_DATE="1610000000">百度</A>
+        <DT><A HREF="https://tencent.com" ADD_DATE="1610000000">腾讯</A>
+        <DT><A HREF="https://apple.com" ADD_DATE="1610000000">Apple</A>
+        <DT><A HREF="https://yahoo.com" ADD_DATE="1610000000">Yahoo</A>
+    </DL><p>
+</DL><p>
+"""
+    root = parse_bookmarks_html(html)
+    sort_and_restructure_folder(root, "Folder A")
+    
+    # Structure should be: root -> Folder A -> 2021 -> 210107 -> sorted bookmarks
+    folder_a = root.children[0]
+    assert folder_a.title == "Folder A"
+    assert len(folder_a.children) == 1
+    
+    year_folder = folder_a.children[0]
+    assert year_folder.title == "2021"
+    assert len(year_folder.children) == 1
+    
+    date_folder = year_folder.children[0]
+    assert date_folder.title == "210107"
+    assert len(date_folder.children) == 5
+    
+    # Verify Pinyin sort order
+    titles = [b.title for b in date_folder.children]
+    assert titles == ["Apple", "百度", "谷歌", "腾讯", "Yahoo"]

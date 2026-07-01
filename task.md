@@ -14,11 +14,17 @@
     - [x] Add formatting/serialization of duplicates list to HTML/JSON/CSV/TSV
     - [x] Determine duplicates output filename (`-dups`) and write it
     - [x] Format and print execution statistics to `sys.stderr`
+- [x] Add sorting and Pinyin functionality
+    - [x] Update `pyproject.toml` with `pypinyin` dependency
+    - [x] Implement folder lookup by name/path in `cleanup.py`
+    - [x] Implement `sort_and_restructure_folder` with `yyyy/yymmdd` and Pinyin alphabetical sorting in `cleanup.py`
+    - [x] Integrate `--sort` command line option in `main.py`
 - [x] Update Test suite (`tests/`)
-    - [x] Update unit tests to verify cleanup return values & stats
-    - [x] Update CLI integration tests to verify `-dups` file creation and stderr outputs
+    - [x] Add unit tests for Pinyin sorting and folder restructuring in `test_cleanup.py`
+    - [x] Add CLI integration test for `--sort` option in `test_cli.py`
 - [x] Update documentation (`README.md`)
-    - [x] Detail purpose, features, usage, build, and test steps
+    - [x] Document `--sort` feature, folder structure, and Pinyin sorting
 - [x] Verify everything passes
+    - [x] Reinstall package to fetch dependencies
     - [x] Run pytest
     - [x] Run manual verification

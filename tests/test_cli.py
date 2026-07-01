@@ -143,3 +143,29 @@ def test_cli_invalid_input(tmp_path, capsys):
     
     captured = capsys.readouterr()
     assert "Error: Input file 'non_existent_file.html' does not exist." in captured.err
+
+
+def test_cli_sort_option(tmp_path, capsys):
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+    <DT><H3>Folder A</H3>
+    <DL><p>
+        <DT><A HREF="https://google.com" ADD_DATE="1610000000">谷歌</A>
+        <DT><A HREF="https://baidu.com" ADD_DATE="1610000000">百度</A>
+    </DL><p>
+</DL><p>
+"""
+    input_file = tmp_path / "bookmarks.html"
+    input_file.write_text(html, encoding="utf-8")
+    
+    exit_code = main([str(input_file), "--sort", "Folder A"])
+    assert exit_code == 0
+    
+    captured = capsys.readouterr()
+    stdout = captured.out
+    
+    assert "<H3>Folder A</H3>" in stdout
+    assert ">2021</H3>" in stdout
+    assert ">210107</H3>" in stdout
+    assert "百度" in stdout
+    assert "谷歌" in stdout
