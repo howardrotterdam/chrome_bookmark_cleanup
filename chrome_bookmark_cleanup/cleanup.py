@@ -261,6 +261,29 @@ def find_folder(node, target_path, current_path=None):
     return None
 
 
+def find_all_folders(node, target_path, current_path=None):
+    """Recursively finds all folders matching target_path by exact path or by folder title.
+    Returns a list of BookmarkNodes.
+    """
+    if current_path is None:
+        current_path = []
+        
+    if not node.is_folder:
+        return []
+        
+    matches = []
+    path_str = "/".join(current_path)
+    if node.title != "Root":
+        if path_str == target_path or node.title == target_path:
+            matches.append(node)
+            
+    for child in node.children:
+        if child.is_folder:
+            matches.extend(find_all_folders(child, target_path, current_path + [child.title]))
+            
+    return matches
+
+
 def collect_bookmarks_recursive(node):
     """Collects all bookmarks (non-folder nodes) recursively under a given node."""
     bookmarks = []
@@ -273,11 +296,12 @@ def collect_bookmarks_recursive(node):
 
 
 def sort_and_restructure_folder(root, target_path):
-    """Finds the folder by target_path under root, and restructures/sorts it."""
-    target_folder = find_folder(root, target_path)
-    if not target_folder:
+    """Finds all folders by target_path under root, and restructures/sorts each of them and their subfolders."""
+    target_folders = find_all_folders(root, target_path)
+    if not target_folders:
         raise ValueError(f"Bookmark folder '{target_path}' not found.")
-    sort_and_restructure_node(target_folder)
+    for folder in target_folders:
+        sort_and_restructure_node(folder)
 
 
 def sort_all_folders(root):

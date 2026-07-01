@@ -218,3 +218,39 @@ def test_merge_duplicate_folders():
     assert len(folder_a.children) == 2
     assert stats["folders_merged"] == 1
 
+
+def test_sort_multiple_matching_folders():
+    from chrome_bookmark_cleanup.cleanup import sort_and_restructure_folder
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+    <DT><H3>Folder A</H3>
+    <DL><p>
+        <DT><A HREF="https://z.com">Z</A>
+        <DT><A HREF="https://y.com">Y</A>
+    </DL><p>
+    <DT><H3>Other</H3>
+    <DL><p>
+        <DT><H3>Folder A</H3>
+        <DL><p>
+            <DT><A HREF="https://b.com">B</A>
+            <DT><A HREF="https://a.com">A</A>
+        </DL><p>
+    </DL><p>
+</DL><p>
+"""
+    root = parse_bookmarks_html(html)
+    sort_and_restructure_folder(root, "Folder A")
+    
+    # First Folder A
+    folder_a1 = root.children[0]
+    assert folder_a1.title == "Folder A"
+    assert folder_a1.children[0].title == "Y"
+    assert folder_a1.children[1].title == "Z"
+    
+    # Second Folder A (under Other)
+    other = root.children[1]
+    folder_a2 = other.children[0]
+    assert folder_a2.title == "Folder A"
+    assert folder_a2.children[0].title == "A"
+    assert folder_a2.children[1].title == "B"
+
