@@ -227,15 +227,27 @@ def collect_bookmarks_recursive(node):
 
 
 def sort_and_restructure_folder(root, target_path):
-    """Finds the folder by target_path under root, extracts all bookmarks,
-    re-organizes them into yyyy/yymmdd folders, and sorts them alphabetically
-    (Pinyin sorting for Chinese characters).
-    """
-    from datetime import datetime, timezone
+    """Finds the folder by target_path under root, and restructures/sorts it."""
     target_folder = find_folder(root, target_path)
     if not target_folder:
         raise ValueError(f"Bookmark folder '{target_path}' not found.")
-        
+    sort_and_restructure_node(target_folder)
+
+
+def sort_all_folders(root):
+    """Restructures and sorts all top-level folders (direct children of the Root node)."""
+    for child in root.children:
+        if child.is_folder:
+            sort_and_restructure_node(child)
+
+
+def sort_and_restructure_node(target_folder):
+    """Extracts all bookmarks under target_folder recursively, re-organizes
+    them into yyyy/yymmdd folders under it, and sorts them alphabetically
+    (Pinyin sorting for Chinese characters).
+    """
+    from datetime import datetime, timezone
+    
     # Gather all bookmarks recursively
     bookmarks = collect_bookmarks_recursive(target_folder)
     

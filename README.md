@@ -45,7 +45,7 @@ chrome-bookmark-cleanup <input_file> [options]
 
 - `-o`, `--output <path>`: Path to write the cleaned bookmarks. If not specified, writes to standard output.
 - `-f`, `--format <html|json|csv|tsv>`: Output format (default is `html`).
-- `--sort <folder_path_or_name>`: Specify a folder path (e.g., `"Bookmarks bar/My Folder"`) or a folder title to restructure and sort.
+- `-s`, `--sort [<folder_path_or_name>]`: Specify a folder path (e.g., `"Bookmarks bar/My Folder"`) or folder title to restructure and sort. If no folder is specified, restructures and sorts all top-level folders.
 - `-h`, `--help`: Show usage and help.
 
 ### Examples

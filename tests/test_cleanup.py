@@ -138,3 +138,30 @@ def test_sort_and_restructure_folder():
     # Verify Pinyin sort order
     titles = [b.title for b in date_folder.children]
     assert titles == ["Apple", "百度", "谷歌", "腾讯", "Yahoo"]
+
+
+def test_sort_all_folders():
+    from chrome_bookmark_cleanup.cleanup import sort_all_folders
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+    <DT><H3>Folder A</H3>
+    <DL><p>
+        <DT><A HREF="https://google.com" ADD_DATE="1610000000">谷歌</A>
+    </DL><p>
+    <DT><H3>Folder B</H3>
+    <DL><p>
+        <DT><A HREF="https://baidu.com" ADD_DATE="1610000000">百度</A>
+    </DL><p>
+</DL><p>
+"""
+    root = parse_bookmarks_html(html)
+    sort_all_folders(root)
+    
+    # Both Folder A and Folder B should be restructured
+    folder_a = root.children[0]
+    assert folder_a.title == "Folder A"
+    assert folder_a.children[0].title == "2021"
+    
+    folder_b = root.children[1]
+    assert folder_b.title == "Folder B"
+    assert folder_b.children[0].title == "2021"
