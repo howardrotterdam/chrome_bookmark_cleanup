@@ -105,6 +105,27 @@
         transition: transform 0.15s ease;
     }
 
+    /* Count Badge Metrics Styling */
+    .counter-badge {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 10px;
+        margin-left: 5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        line-height: 1.2;
+    }
+    .badge-folders {
+        background-color: #e2e3e5;
+        color: #383d41;
+    }
+    .badge-bookmarks {
+        background-color: #cff4fc;
+        color: #055160;
+    }
+
     /* Action Controls Styling */
     .branch-btn, .path-btn {
         font-size: 11px;
@@ -201,7 +222,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        // 1. Setup the Path Modal Popup elements in the DOM base
+        // 1. Setup the Path Modal Popup elements
         const modalOverlay = document.createElement("div");
         modalOverlay.className = "path-modal-overlay";
         modalOverlay.innerHTML = `
@@ -218,7 +239,6 @@
         const modalInput = modalOverlay.querySelector(".path-display-input");
         const modalCopyBtn = modalOverlay.querySelector("#modal-copy-btn");
 
-        // Close modal when clicking outside the box
         modalOverlay.addEventListener("click", (e) => {
             if (e.target === modalOverlay) modalOverlay.style.display = "none";
         });
@@ -263,31 +283,42 @@
             let pathSegments = [];
             let currentElement = element.closest("dt");
 
-            // Handle leaf node if specified (the bookmark title itself)
             if (leafText) {
                 pathSegments.unshift(leafText.trim());
             }
 
-            // Step upward through the parent elements to extract folder lineage titles
             while (currentElement) {
                 const parentH3 = currentElement.querySelector(":scope > .folder-header-container > h3, :scope > h3");
                 if (parentH3) {
-                    pathSegments.unshift(parentH3.textContent.trim());
+                    // Extract text only, bypassing the inner count badge contents
+                    const folderNameNode = parentH3.childNodes[0];
+                    if (folderNameNode) {
+                        pathSegments.unshift(folderNameNode.textContent.trim());
+                    }
                 }
                 currentElement = currentElement.parentElement ? currentElement.parentElement.closest("dt") : null;
             }
 
-            // Join array values without spacing flags using Unix '/' notation
             modalInput.value = pathSegments.join("/");
             modalOverlay.style.display = "flex";
             modalInput.select();
         }
 
-        // 3. Configure folder headers [H3]
+        // 3. Configure folder headers [H3] & Calculate tree metrics
         const folders = document.querySelectorAll("dt h3");
         folders.forEach(h3 => {
             const parentDT = h3.parentElement;
             
+            // Calculate total nested subfolders and bookmarks inside this folder scope
+            const totalSubfolders = parentDT.querySelectorAll("dl dt h3").length;
+            const totalBookmarks = parentDT.querySelectorAll("dl dt a").length;
+
+            // Generate count metric badges
+            const folderBadge = `<span class="counter-badge badge-folders" title="Subfolders">📁 ${totalSubfolders}</span>`;
+            const bookmarkBadge = `<span class="counter-badge badge-bookmarks" title="Bookmarks">🔖 ${totalBookmarks}</span>`;
+            h3.innerHTML += folderBadge + bookmarkBadge;
+
+            // Structural containment wrap setup
             const container = document.createElement("span");
             container.className = "folder-header-container";
             parentDT.insertBefore(container, h3);
@@ -341,11 +372,10 @@
         // 4. Configure individual bookmark links [A]
         const links = document.querySelectorAll("dt a");
         links.forEach(a => {
-            a.setAttribute("target", "_blank"); // Open links in a new tab
+            a.setAttribute("target", "_blank");
             
             const parentDT = a.parentElement;
             
-            // Setup visual wrapper block to avoid layout break
             const container = document.createElement("span");
             container.className = "bookmark-item-container";
             parentDT.insertBefore(container, a);
