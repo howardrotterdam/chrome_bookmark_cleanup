@@ -12,9 +12,37 @@
     h1 {
         font-size: 24px;
         color: #343a40;
+        margin-bottom: 10px;
+    }
+
+    /* Global Sticky Top Control Toolbar */
+    .global-toolbar {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        padding: 10px 0 20px 0;
         border-bottom: 2px solid #dee2e6;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        display: flex;
+        gap: 12px;
+        z-index: 1000;
+    }
+    .global-btn {
+        font-size: 13px;
+        font-weight: 600;
+        color: #495057;
+        background-color: #ffffff;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .global-btn:hover {
+        background-color: #212529;
+        color: #ffffff;
+        border-color: #212529;
     }
 
     /* Core Tree Structure & Indentation Guide Lines */
@@ -117,19 +145,45 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        // Find all folder headers (H3) inside the Netscape structure
+        // 1. Create and inject the Global Sticky Top Toolbar right after the main H1 heading
+        const mainHeading = document.querySelector("h1");
+        if (mainHeading) {
+            const toolbar = document.createElement("div");
+            toolbar.className = "global-toolbar";
+            
+            const expandAllBtn = document.createElement("button");
+            expandAllBtn.className = "global-btn";
+            expandAllBtn.innerText = "↔ Expand All Folders";
+            
+            const collapseAllBtn = document.createElement("button");
+            collapseAllBtn.className = "global-btn";
+            collapseAllBtn.innerText = "→│← Collapse All Folders";
+            
+            toolbar.appendChild(expandAllBtn);
+            toolbar.appendChild(collapseAllBtn);
+            mainHeading.insertAdjacentElement("afterend", toolbar);
+
+            // Global Control Event Listeners
+            expandAllBtn.addEventListener("click", () => {
+                document.querySelectorAll("dt").forEach(dt => dt.classList.remove("collapsed"));
+            });
+
+            collapseAllBtn.addEventListener("click", () => {
+                document.querySelectorAll("dt").forEach(dt => dt.classList.add("collapsed"));
+            });
+        }
+
+        // 2. Scan and inject inline branch actions [+] / [-]
         const folders = document.querySelectorAll("dt h3");
         
         folders.forEach(h3 => {
-            const parentDT = h3.parentElement; // The current <DT> element wrapping this folder block
+            const parentDT = h3.parentElement;
             
-            // 1. Wrap the H3 inside a container so we can position buttons neatly next to it
             const container = document.createElement("span");
             container.className = "folder-header-container";
             parentDT.insertBefore(container, h3);
             container.appendChild(h3);
 
-            // 2. Append the branch-level action buttons
             const expandBtn = document.createElement("span");
             expandBtn.className = "branch-btn";
             expandBtn.innerText = "[+]";
@@ -143,15 +197,12 @@
             container.appendChild(expandBtn);
             container.appendChild(collapseBtn);
             
-            // 3. Simple Single Folder Toggle Behavior
             h3.addEventListener("click", (e) => {
                 parentDT.classList.toggle("collapsed");
             });
 
-            // 4. Branch Level Control Logic
             expandBtn.addEventListener("click", (e) => {
-                e.stopPropagation(); // Prevents triggering single-folder toggle
-                // Make sure parent folder is open, then open all lower child folders inside this scope
+                e.stopPropagation();
                 parentDT.classList.remove("collapsed");
                 parentDT.querySelectorAll("dt").forEach(childDT => {
                     childDT.classList.remove("collapsed");
@@ -159,17 +210,15 @@
             });
 
             collapseBtn.addEventListener("click", (e) => {
-                e.stopPropagation(); // Prevents triggering single-folder toggle
-                // Target all lower child folders inside this scope and collapse them
+                e.stopPropagation();
                 parentDT.querySelectorAll("dt").forEach(childDT => {
                     childDT.classList.add("collapsed");
                 });
-                // Finally, collapse the parent folder itself
                 parentDT.classList.add("collapsed");
             });
         });
 
-        // Force all bookmark hyperlinks to open in clean new tabs automatically
+        // Force links to target blank
         document.querySelectorAll("dt a").forEach(a => a.setAttribute("target", "_blank"));
     });
 </script>
