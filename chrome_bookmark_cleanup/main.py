@@ -106,7 +106,7 @@ def main(args=None):
         help="Output format (default: html)."
     )
     parser.add_argument(
-        "--sort",
+        "-s", "--sort",
         help="Specify a bookmark folder name or path to be restructured and sorted into yyyy/yymmdd folders."
     )
 
