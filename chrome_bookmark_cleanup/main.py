@@ -87,6 +87,26 @@ def get_dups_output_path(output_path, input_path, output_format):
         return f"{base}-dups{ext}"
 
 
+def load_template():
+    """Loads the bookmarks-browser-template.html file if it exists, otherwise returns empty string."""
+    # Check current directory
+    if os.path.exists("bookmarks-browser-template.html"):
+        try:
+            with open("bookmarks-browser-template.html", "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            pass
+    # Check parent directory (relative to source package file)
+    rel_path = os.path.join(os.path.dirname(__file__), "..", "bookmarks-browser-template.html")
+    if os.path.exists(rel_path):
+        try:
+            with open(rel_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            pass
+    return ""
+
+
 def main(args=None):
     parser = argparse.ArgumentParser(
         description="Clean up Chrome bookmark export HTML files by removing duplicates and empty folders."
@@ -145,8 +165,12 @@ def main(args=None):
     root, removed_duplicates, stats = cleanup_bookmarks(root)
 
     # Format main output
+    template_content = ""
     if parsed_args.format == "html":
-        output_content = serialize_to_html(root)
+        template_content = load_template()
+
+    if parsed_args.format == "html":
+        output_content = template_content + serialize_to_html(root)
     else:
         flat_bookmarks = flatten_bookmarks(root)
         if parsed_args.format == "json":
@@ -161,6 +185,8 @@ def main(args=None):
 
     # Format and serialize duplicates output
     dups_content = serialize_duplicates(removed_duplicates, parsed_args.format)
+    if parsed_args.format == "html":
+        dups_content = template_content + dups_content
     dups_path = get_dups_output_path(parsed_args.output, parsed_args.input_file, parsed_args.format)
 
     # Write main output

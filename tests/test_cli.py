@@ -21,6 +21,8 @@ def test_cli_html_output(tmp_path, sample_bookmarks_html, capsys):
     assert "Google" in stdout
     assert "Empty Folder" not in stdout
     assert "Nested Empty Folder" not in stdout
+    assert "<style>" in stdout
+    assert "Reset & Modern Font Base" in stdout
     
     # Verify stats in stderr
     assert "=== Chrome Bookmark Cleanup Statistics ===" in stderr
@@ -39,6 +41,8 @@ def test_cli_html_output(tmp_path, sample_bookmarks_html, capsys):
     assert "Removed Duplicates" in dups_content
     assert "Google" in dups_content
     assert "1610000001" in dups_content
+    assert "<style>" in dups_content
+    assert "Reset & Modern Font Base" in dups_content
 
 
 def test_cli_json_output(tmp_path, sample_bookmarks_html, capsys):

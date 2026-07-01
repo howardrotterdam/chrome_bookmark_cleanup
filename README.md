@@ -21,6 +21,7 @@ there is no fine control based on bookmark name or add date.
 6. **Removed Duplicates Log**: Automatically saves the removed duplicate entries to a separate file (e.g., `bookmarks-dups.html` or `bookmarks-dups.json`) next to the output file using the same format.
 7. **Execution Statistics**: Prints detailed summaries of changes (input/output counts, duplicate count, merged count, pruned folder count, merged folder count) directly to `sys.stderr`.
 8. **Folder Restructuring & Sorting**: Recursively sorts direct bookmarks alphabetically (using case-insensitive Pinyin for Chinese titles) under a specified folder and all its subfolders. If a folder contains 400 or more direct bookmarks, they are restructured into nested date folders (`yyyy/yymmdd`) under that folder based on their `ADD_DATE` (in UTC). For folders with fewer than 400 bookmarks, they are sorted directly in-place.
+9. **Interactive HTML Browser Template**: Automatically prepends the contents of `bookmarks-browser-template.html` (if available) when exporting in HTML format. This embeds collapsible controls, lineage path copy overlay dialogs, expanding/collapsing buttons, and subfolder/bookmark counter badges directly into the HTML for interactive browser browsing.
 
 ## Installation & Build
 

@@ -15,6 +15,7 @@
     - [x] Add formatting/serialization of duplicates list to HTML/JSON/CSV/TSV
     - [x] Determine duplicates output filename (`-dups`) and write it
     - [x] Format and print execution statistics to `sys.stderr`
+    - [x] Prepend bookmarks-browser-template.html content when output format is HTML
 - [x] Add sorting and Pinyin functionality
     - [x] Update `pyproject.toml` with `pypinyin` dependency
     - [x] Implement folder lookup by name/path in `cleanup.py`

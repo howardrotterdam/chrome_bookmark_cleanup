@@ -1,15 +1,18 @@
 # Walkthrough - Chrome Bookmark Cleanup Updates
 
-We have successfully updated the `chrome-bookmark-cleanup` tool so that when a folder name is specified, the sorting and restructuring is applied to **all** folders matching that name in the bookmarks tree, along with all of their subfolders recursively.
+We have successfully updated the `chrome-bookmark-cleanup` tool so that when the output format is HTML, it automatically prepends the content of `bookmarks-browser-template.html` (which defines reset styles, interactive collapsible list behaviors, count badges, and full-lineage path dialogs).
 
 ## Changes Made
 
-1. **Core Module (`cleanup.py`)**:
-   - Implemented `find_all_folders` which recursively retrieves all folders matching a target title or path.
-   - Updated `sort_and_restructure_folder` to sort and restructure every matching folder.
+1. **CLI Module (`main.py`)**:
+   - Implemented `load_template()` to search for and read the `bookmarks-browser-template.html` template.
+   - Updated output generation and duplicate serialization to prepend the template content when exporting HTML.
 
 2. **Testing Suite**:
-   - Added unit test `test_sort_multiple_matching_folders` in `tests/test_cleanup.py`.
+   - Updated `test_cli_html_output` in `tests/test_cli.py` to assert that `<style>` and other CSS patterns from the template are present in both the main output and the duplicates output file.
+
+3. **Documentation (`README.md`)**:
+   - Documented the interactive HTML browser template feature.
 
 ## Verification Results
 
@@ -42,4 +45,4 @@ tests/test_parser.py::test_serialization PASSED                          [100%]
 
 ======================== 19 passed, 2 warnings in 0.15s ========================
 ```
-Targeting and sorting all folders matching a specified name and their subfolders recursively works perfectly!
+Interactive HTML template prepending works perfectly!
