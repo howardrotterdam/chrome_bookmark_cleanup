@@ -162,16 +162,61 @@ def remove_empty_folders(node):
     return len(node.children) == 0
 
 
+def merge_duplicate_folders(node):
+    """Recursively merges subfolders with the same title under the same parent node.
+    Returns the number of duplicate folders merged.
+    """
+    if not node.is_folder:
+        return 0
+        
+    merged_count = 0
+    # First, recursively merge subfolders in each child folder
+    for child in node.children:
+        if child.is_folder:
+            merged_count += merge_duplicate_folders(child)
+            
+    # Find duplicate folders under the current node
+    merged_children = []
+    folder_map = {}
+    
+    for child in node.children:
+        if child.is_folder:
+            title = child.title
+            if title in folder_map:
+                target_folder = folder_map[title]
+                target_folder.children.extend(child.children)
+                merged_count += 1
+            else:
+                folder_map[title] = child
+                merged_children.append(child)
+        else:
+            merged_children.append(child)
+            
+    node.children = merged_children
+    
+    # Recursively merge any newly combined subfolders
+    for child in node.children:
+        if child.is_folder:
+            merged_count += merge_duplicate_folders(child)
+            
+    return merged_count
+
+
 def cleanup_bookmarks(root):
     """Executes the entire cleanup pipeline on the bookmark tree.
     Returns (cleaned_root, removed_duplicates, stats).
     """
     # Build parent map and count metrics before cleanup
-    parent_map = build_parent_map(root)
     folders_before = count_folders(root)
     bookmarks_before = count_bookmarks(root)
     
-    # Run cleanup steps
+    # Merge duplicate folders first
+    folders_merged = merge_duplicate_folders(root)
+    
+    # Build parent map after folder merging (since structure changed)
+    parent_map = build_parent_map(root)
+    
+    # Run other cleanup steps
     removed_duplicates = remove_duplicates(root, parent_map)
     same_url_merged = merge_same_urls(root)
     remove_empty_folders(root)
@@ -179,14 +224,15 @@ def cleanup_bookmarks(root):
     # Count metrics after cleanup
     folders_after = count_folders(root)
     bookmarks_after = count_bookmarks(root)
-    empty_folders_removed = folders_before - folders_after
+    empty_folders_removed = folders_before - folders_after - folders_merged
     
     stats = {
         "input_bookmarks": bookmarks_before,
         "output_bookmarks": bookmarks_after,
         "duplicates_removed": len(removed_duplicates),
         "same_url_merged": same_url_merged,
-        "empty_folders_removed": empty_folders_removed
+        "empty_folders_removed": empty_folders_removed,
+        "folders_merged": folders_merged
     }
     
     return root, removed_duplicates, stats

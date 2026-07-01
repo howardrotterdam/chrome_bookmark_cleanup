@@ -28,6 +28,7 @@ def test_cli_html_output(tmp_path, sample_bookmarks_html, capsys):
     assert "Total Bookmarks Output:      3" in stderr
     assert "Duplicate Bookmarks Removed: 1" in stderr
     assert "Same-URL Bookmarks Merged:   1" in stderr
+    assert "Duplicate Folders Merged:    0" in stderr
     assert "Empty Folders Removed:       2" in stderr
     
     # Verify duplicates file next to input file

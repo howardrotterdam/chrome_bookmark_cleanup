@@ -103,6 +103,7 @@ def test_full_cleanup_pipeline(sample_bookmarks_html):
     assert stats["duplicates_removed"] == 1
     assert stats["same_url_merged"] == 1
     assert stats["empty_folders_removed"] == 2
+    assert stats["folders_merged"] == 0
 
 
 def test_sort_small_folder_in_place():
@@ -188,4 +189,32 @@ def test_sort_subfolders_recursively():
     assert len(child.children) == 2
     assert child.children[0].title == "X"
     assert child.children[1].title == "Y"
+
+
+def test_merge_duplicate_folders():
+    from chrome_bookmark_cleanup.cleanup import cleanup_bookmarks
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+    <DT><H3>Bookmarks bar</H3>
+    <DL><p>
+        <DT><H3>Folder A</H3>
+        <DL><p>
+            <DT><A HREF="https://google.com">Google</A>
+        </DL><p>
+        <DT><H3>Folder A</H3>
+        <DL><p>
+            <DT><A HREF="https://baidu.com">Baidu</A>
+        </DL><p>
+    </DL><p>
+</DL><p>
+"""
+    root = parse_bookmarks_html(html)
+    root, removed_duplicates, stats = cleanup_bookmarks(root)
+    
+    bookmarks_bar = root.children[0]
+    assert len(bookmarks_bar.children) == 1
+    folder_a = bookmarks_bar.children[0]
+    assert folder_a.title == "Folder A"
+    assert len(folder_a.children) == 2
+    assert stats["folders_merged"] == 1
 

@@ -16,10 +16,11 @@ there is no fine control based on bookmark name or add date.
 1. **Duplicate Bookmark Removal**: Removes duplicate bookmarks where the name and URL are exactly the same, keeping only the newest bookmark (determined by the `ADD_DATE` attribute).
 2. **URL Merging & Grouping**: If different bookmarks share the same URL but have different names, they are moved to the folder containing the newest bookmark and stored consecutively, ordered chronologically.
 3. **Empty Folder Pruning**: Recursively removes any empty folders.
-4. **Flexible Output Formats**: Supports outputting results in standard Chrome HTML format (suitable for immediate re-importing), JSON lists, CSV, or TSV formats.
-5. **Removed Duplicates Log**: Automatically saves the removed duplicate entries to a separate file (e.g., `bookmarks-dups.html` or `bookmarks-dups.json`) next to the output file using the same format.
-6. **Execution Statistics**: Prints detailed summaries of changes (input/output counts, duplicate count, merged count, pruned folder count) directly to `sys.stderr`.
-7. **Folder Restructuring & Sorting**: Recursively sorts direct bookmarks alphabetically (using case-insensitive Pinyin for Chinese titles) under a specified folder and all its subfolders. If a folder contains 400 or more direct bookmarks, they are restructured into nested date folders (`yyyy/yymmdd`) under that folder based on their `ADD_DATE` (in UTC). For folders with fewer than 400 bookmarks, they are sorted directly in-place.
+4. **Duplicate Folder Merging**: Recursively merges duplicate folders (folders with the same name located under the same parent folder) and combines their contents.
+5. **Flexible Output Formats**: Supports outputting results in standard Chrome HTML format (suitable for immediate re-importing), JSON lists, CSV, or TSV formats.
+6. **Removed Duplicates Log**: Automatically saves the removed duplicate entries to a separate file (e.g., `bookmarks-dups.html` or `bookmarks-dups.json`) next to the output file using the same format.
+7. **Execution Statistics**: Prints detailed summaries of changes (input/output counts, duplicate count, merged count, pruned folder count, merged folder count) directly to `sys.stderr`.
+8. **Folder Restructuring & Sorting**: Recursively sorts direct bookmarks alphabetically (using case-insensitive Pinyin for Chinese titles) under a specified folder and all its subfolders. If a folder contains 400 or more direct bookmarks, they are restructured into nested date folders (`yyyy/yymmdd`) under that folder based on their `ADD_DATE` (in UTC). For folders with fewer than 400 bookmarks, they are sorted directly in-place.
 
 ## Installation & Build
 
@@ -83,6 +84,7 @@ Total Bookmarks Input:       452
 Total Bookmarks Output:      412
 Duplicate Bookmarks Removed: 40
 Same-URL Bookmarks Merged:   15
+Duplicate Folders Merged:    3
 Empty Folders Removed:       8
 ==========================================
 ```

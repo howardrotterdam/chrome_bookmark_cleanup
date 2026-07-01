@@ -188,6 +188,7 @@ def main(args=None):
     sys.stderr.write(f"Total Bookmarks Output:      {stats['output_bookmarks']}\n")
     sys.stderr.write(f"Duplicate Bookmarks Removed: {stats['duplicates_removed']}\n")
     sys.stderr.write(f"Same-URL Bookmarks Merged:   {stats['same_url_merged']}\n")
+    sys.stderr.write(f"Duplicate Folders Merged:    {stats['folders_merged']}\n")
     sys.stderr.write(f"Empty Folders Removed:       {stats['empty_folders_removed']}\n")
     sys.stderr.write("==========================================\n")
 

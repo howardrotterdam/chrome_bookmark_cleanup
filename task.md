@@ -10,6 +10,7 @@
 - [x] Update core cleanup logic (`chrome_bookmark_cleanup/cleanup.py`)
     - [x] Return list of removed duplicate nodes along with original folder paths
     - [x] Calculate and return counts (duplicates removed, same-URL merged, empty folders removed)
+    - [x] Implement recursive merging of duplicate-named folders under the same parent
 - [x] Update CLI script (`chrome_bookmark_cleanup/main.py`)
     - [x] Add formatting/serialization of duplicates list to HTML/JSON/CSV/TSV
     - [x] Determine duplicates output filename (`-dups`) and write it
