@@ -105,7 +105,7 @@ def test_full_cleanup_pipeline(sample_bookmarks_html):
     assert stats["empty_folders_removed"] == 2
 
 
-def test_sort_and_restructure_folder():
+def test_sort_small_folder_in_place():
     from chrome_bookmark_cleanup.cleanup import sort_and_restructure_folder
     html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <DL><p>
@@ -122,46 +122,70 @@ def test_sort_and_restructure_folder():
     root = parse_bookmarks_html(html)
     sort_and_restructure_folder(root, "Folder A")
     
-    # Structure should be: root -> Folder A -> 2021 -> 210107 -> sorted bookmarks
     folder_a = root.children[0]
     assert folder_a.title == "Folder A"
-    assert len(folder_a.children) == 1
-    
-    year_folder = folder_a.children[0]
-    assert year_folder.title == "2021"
-    assert len(year_folder.children) == 1
-    
-    date_folder = year_folder.children[0]
-    assert date_folder.title == "210107"
-    assert len(date_folder.children) == 5
-    
-    # Verify Pinyin sort order
-    titles = [b.title for b in date_folder.children]
+    # Small count (< 400) -> should be sorted in-place, no year folder
+    assert len(folder_a.children) == 5
+    titles = [b.title for b in folder_a.children]
     assert titles == ["Apple", "百度", "谷歌", "腾讯", "Yahoo"]
 
 
-def test_sort_all_folders():
-    from chrome_bookmark_cleanup.cleanup import sort_all_folders
+def test_sort_large_folder_restructured():
+    from chrome_bookmark_cleanup.cleanup import sort_and_restructure_folder, build_parent_map
+    from chrome_bookmark_cleanup.parser import BookmarkNode
+    
+    root = BookmarkNode(is_folder=True, title="Root")
+    folder_a = BookmarkNode(is_folder=True, title="Folder A")
+    root.children.append(folder_a)
+    
+    # 400 bookmarks
+    for i in range(400):
+        b = BookmarkNode(is_folder=False, title=f"Bookmark {i:03d}", attrs={"href": "https://example.com", "add_date": "1610000000"})
+        folder_a.children.append(b)
+        
+    sort_and_restructure_folder(root, "Folder A")
+    
+    # Large count (>= 400) -> should restructure into yyyy/yymmdd
+    assert len(folder_a.children) == 1
+    year_folder = folder_a.children[0]
+    assert year_folder.title == "2021"
+    
+    assert len(year_folder.children) == 1
+    date_folder = year_folder.children[0]
+    assert date_folder.title == "210107"
+    assert len(date_folder.children) == 400
+    assert date_folder.children[0].title == "Bookmark 000"
+
+
+def test_sort_subfolders_recursively():
+    from chrome_bookmark_cleanup.cleanup import sort_and_restructure_folder
     html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <DL><p>
-    <DT><H3>Folder A</H3>
+    <DT><H3>Parent</H3>
     <DL><p>
-        <DT><A HREF="https://google.com" ADD_DATE="1610000000">谷歌</A>
-    </DL><p>
-    <DT><H3>Folder B</H3>
-    <DL><p>
-        <DT><A HREF="https://baidu.com" ADD_DATE="1610000000">百度</A>
+        <DT><A HREF="https://z.com" ADD_DATE="1610000000">Z</A>
+        <DT><H3>Child</H3>
+        <DL><p>
+            <DT><A HREF="https://y.com" ADD_DATE="1610000000">Y</A>
+            <DT><A HREF="https://x.com" ADD_DATE="1610000000">X</A>
+        </DL><p>
     </DL><p>
 </DL><p>
 """
     root = parse_bookmarks_html(html)
-    sort_all_folders(root)
+    sort_and_restructure_folder(root, "Parent")
     
-    # Both Folder A and Folder B should be restructured
-    folder_a = root.children[0]
-    assert folder_a.title == "Folder A"
-    assert folder_a.children[0].title == "2021"
+    parent = root.children[0]
+    assert parent.title == "Parent"
     
-    folder_b = root.children[1]
-    assert folder_b.title == "Folder B"
-    assert folder_b.children[0].title == "2021"
+    # Parent should contain Folder "Child" and Bookmark "Z" (folders first, then bookmarks)
+    assert len(parent.children) == 2
+    assert parent.children[0].title == "Child"
+    assert parent.children[1].title == "Z"
+    
+    # Child should be sorted in-place internally
+    child = parent.children[0]
+    assert len(child.children) == 2
+    assert child.children[0].title == "X"
+    assert child.children[1].title == "Y"
+

@@ -1,50 +1,50 @@
 # Walkthrough - Chrome Bookmark Cleanup Updates
 
-We have successfully updated the `chrome-bookmark-cleanup` tool so that the `--sort` / `-s` option takes an optional argument. If no folder is specified, all top-level folders (direct children of the Root node, e.g. `Bookmarks bar` and `Other bookmarks`) are restructured and sorted.
+We have successfully updated the `chrome-bookmark-cleanup` tool so that the `--sort` option recursively sorts bookmarks in the target folder and every subfolder underneath it. 
+
+Additionally, a folder's bookmarks are only restructured into `yyyy/yymmdd` nested folders if the folder contains **400 or more direct child bookmarks**. If a folder contains fewer than 400 direct bookmarks, they are sorted alphabetically/Pinyin in-place inside the folder.
 
 ## Changes Made
 
 1. **Core Module (`cleanup.py`)**:
-   - Extracted the core restructuring logic into `sort_and_restructure_node`.
-   - Implemented `sort_all_folders(root)` to iterate over all folder children of the Root node and restructure/sort them.
+   - Replaced the recursive bookmark retrieval with sorting direct bookmarks only at the current node level.
+   - Implemented a 400-bookmark threshold check: if a folder has fewer than 400 direct bookmarks, it sorts them in-place. If it has 400 or more direct bookmarks, it restructures them into year and date subfolders (`yyyy/yymmdd`).
+   - Recursively applied this operation to all subfolders.
 
-2. **CLI Script (`main.py`)**:
-   - Modified `argparse` to configure `-s` / `--sort` with `nargs='?'` and `const=True`.
-   - Added logic to execute `sort_all_folders(root)` when `--sort` is provided without arguments, and `sort_and_restructure_folder(root, parsed_args.sort)` when a folder name/path is provided.
+2. **Testing Suite**:
+   - Rewrote unit tests in `tests/test_cleanup.py` (`test_sort_small_folder_in_place`, `test_sort_large_folder_restructured`, `test_sort_subfolders_recursively`) to verify the 400-bookmark threshold, sorting in-place, and subfolder recursion behavior.
+   - Updated integration tests in `tests/test_cli.py` to match the new sorting behavior.
 
-3. **Testing Suite**:
-   - Added unit test `test_sort_all_folders` to `tests/test_cleanup.py`.
-   - Added integration test `test_cli_sort_all_folders` to `tests/test_cli.py`.
-
-4. **Documentation (`README.md`)**:
-   - Updated the `--sort` option description to reflect the optional argument and default behavior of sorting all folders.
+3. **Documentation (`README.md`)**:
+   - Updated descriptions and examples detailing the 400-bookmark threshold and recursive sorting behavior.
 
 ## Verification Results
 
 ### Automated Tests
-Ran `pytest -v` resulting in 16 passing test cases:
+Ran `pytest -v` resulting in 17 passing test cases:
 ```bash
 $ pytest -v
 ============================= test session starts ==============================
-collected 16 items
+collected 17 items
 
-tests/test_cleanup.py::test_remove_duplicates PASSED                     [  6%]
-tests/test_cleanup.py::test_merge_same_urls PASSED                       [ 12%]
-tests/test_cleanup.py::test_remove_empty_folders PASSED                  [ 18%]
-tests/test_cleanup.py::test_full_cleanup_pipeline PASSED                 [ 25%]
-tests/test_cleanup.py::test_sort_and_restructure_folder PASSED           [ 31%]
-tests/test_cleanup.py::test_sort_all_folders PASSED                      [ 37%]
-tests/test_cli.py::test_cli_html_output PASSED                           [ 43%]
-tests/test_cli.py::test_cli_json_output PASSED                           [ 50%]
-tests/test_cli.py::test_cli_csv_output PASSED                            [ 56%]
-tests/test_cli.py::test_cli_tsv_output PASSED                            [ 62%]
-tests/test_cli.py::test_cli_output_file PASSED                           [ 68%]
-tests/test_cli.py::test_cli_invalid_input PASSED                         [ 75%]
-tests/test_cli.py::test_cli_sort_option PASSED                           [ 81%]
-tests/test_cli.py::test_cli_sort_all_folders PASSED                      [ 87%]
-tests/test_parser.py::test_parse_simple_structure PASSED                 [ 93%]
+tests/test_cleanup.py::test_remove_duplicates PASSED                     [  5%]
+tests/test_cleanup.py::test_merge_same_urls PASSED                       [ 11%]
+tests/test_cleanup.py::test_remove_empty_folders PASSED                  [ 17%]
+tests/test_cleanup.py::test_full_cleanup_pipeline PASSED                 [ 23%]
+tests/test_cleanup.py::test_sort_small_folder_in_place PASSED            [ 29%]
+tests/test_cleanup.py::test_sort_large_folder_restructured PASSED        [ 35%]
+tests/test_cleanup.py::test_sort_subfolders_recursively PASSED           [ 41%]
+tests/test_cli.py::test_cli_html_output PASSED                           [ 47%]
+tests/test_cli.py::test_cli_json_output PASSED                           [ 52%]
+tests/test_cli.py::test_cli_csv_output PASSED                            [ 58%]
+tests/test_cli.py::test_cli_tsv_output PASSED                            [ 64%]
+tests/test_cli.py::test_cli_output_file PASSED                           [ 70%]
+tests/test_cli.py::test_cli_invalid_input PASSED                         [ 76%]
+tests/test_cli.py::test_cli_sort_option PASSED                           [ 82%]
+tests/test_cli.py::test_cli_sort_all_folders PASSED                      [ 88%]
+tests/test_parser.py::test_parse_simple_structure PASSED                 [ 94%]
 tests/test_parser.py::test_serialization PASSED                          [100%]
 
-======================== 16 passed, 2 warnings in 0.16s ========================
+======================== 17 passed, 2 warnings in 0.17s ========================
 ```
-Sorting all folders by default works perfectly!
+Threshold-based sorting and subfolder recursion work perfectly!

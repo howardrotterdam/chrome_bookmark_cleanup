@@ -241,79 +241,85 @@ def sort_all_folders(root):
             sort_and_restructure_node(child)
 
 
+def get_pinyin_sort_key(b):
+    """Sort key for case-insensitive alphabetical and Chinese Pinyin sorting."""
+    title_str = str(b.title or "")
+    try:
+        from pypinyin import lazy_pinyin
+        pinyin_list = lazy_pinyin(title_str)
+        key = [p.lower() for p in pinyin_list]
+        return (key, title_str.lower())
+    except ImportError:
+        return (title_str.lower(), title_str)
+
+
 def sort_and_restructure_node(target_folder):
-    """Extracts all bookmarks under target_folder recursively, re-organizes
-    them into yyyy/yymmdd folders under it, and sorts them alphabetically
-    (Pinyin sorting for Chinese characters).
+    """Restructures direct bookmarks in target_folder into yyyy/yymmdd folders
+    if their count >= 400. Otherwise, sorts them alphabetically in-place.
+    Recursively applies this behavior to all of target_folder's subfolders.
     """
     from datetime import datetime, timezone
     
-    # Gather all bookmarks recursively
-    bookmarks = collect_bookmarks_recursive(target_folder)
+    # 1. Separate direct bookmarks and subfolders
+    direct_bookmarks = [c for c in target_folder.children if not c.is_folder]
+    direct_folders = [c for c in target_folder.children if c.is_folder]
     
-    # Clear target folder children completely
-    target_folder.children = []
-    
-    # Restructure into yyyy/yymmdd
-    for b in bookmarks:
-        ts = get_add_date(b)
-        
-        # Coerce/normalize timestamp to seconds
-        if ts > 100000000000:
-            if ts > 100000000000000:
-                ts = ts // 1000000
-            elif ts > 100000000000:
-                ts = ts // 1000
-                
-        try:
-            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-        except (ValueError, OSError, OverflowError):
-            dt = datetime.fromtimestamp(0, tz=timezone.utc)
-            
-        yyyy = dt.strftime('%Y')
-        yymmdd = dt.strftime('%y%m%d')
-        
-        # Find or create year folder
-        year_folder = None
-        for child in target_folder.children:
-            if child.is_folder and child.title == yyyy:
-                year_folder = child
-                break
-        if year_folder is None:
-            year_folder = BookmarkNode(is_folder=True, title=yyyy, attrs={"add_date": str(ts)})
-            target_folder.children.append(year_folder)
-            
-        # Find or create date folder
-        date_folder = None
-        for child in year_folder.children:
-            if child.is_folder and child.title == yymmdd:
-                date_folder = child
-                break
-        if date_folder is None:
-            date_folder = BookmarkNode(is_folder=True, title=yymmdd, attrs={"add_date": str(ts)})
-            year_folder.children.append(date_folder)
-            
-        date_folder.children.append(b)
-        
-    # Sort year folders chronologically
-    target_folder.children.sort(key=lambda x: x.title)
-    
-    # Sort date folders chronologically
-    for year_folder in target_folder.children:
-        year_folder.children.sort(key=lambda x: x.title)
-        
-        # Sort bookmarks inside each date folder alphabetically & Pinyin for Chinese
-        for date_folder in year_folder.children:
+    if len(direct_bookmarks) >= 400:
+        # Reorganize direct bookmarks into yyyy/yymmdd subfolders
+        new_year_folders = []
+        for b in direct_bookmarks:
+            ts = get_add_date(b)
+            # Normalize timestamp
+            if ts > 100000000000:
+                if ts > 100000000000000:
+                    ts = ts // 1000000
+                elif ts > 100000000000:
+                    ts = ts // 1000
             try:
-                from pypinyin import lazy_pinyin
-                def sort_key(b):
-                    title_str = str(b.title or "")
-                    pinyin_list = lazy_pinyin(title_str)
-                    key = [p.lower() for p in pinyin_list]
-                    return (key, title_str.lower())
-            except ImportError:
-                def sort_key(b):
-                    title_str = str(b.title or "")
-                    return (title_str.lower(), title_str)
-                    
-            date_folder.children.sort(key=sort_key)
+                dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            except (ValueError, OSError, OverflowError):
+                dt = datetime.fromtimestamp(0, tz=timezone.utc)
+                
+            yyyy = dt.strftime('%Y')
+            yymmdd = dt.strftime('%y%m%d')
+            
+            # Find or create year folder in new_year_folders
+            year_folder = None
+            for yf in new_year_folders:
+                if yf.title == yyyy:
+                    year_folder = yf
+                    break
+            if year_folder is None:
+                year_folder = BookmarkNode(is_folder=True, title=yyyy, attrs={"add_date": str(ts)})
+                new_year_folders.append(year_folder)
+                
+            # Find or create date folder in year_folder
+            date_folder = None
+            for df in year_folder.children:
+                if df.title == yymmdd:
+                    date_folder = df
+                    break
+            if date_folder is None:
+                date_folder = BookmarkNode(is_folder=True, title=yymmdd, attrs={"add_date": str(ts)})
+                year_folder.children.append(date_folder)
+                
+            date_folder.children.append(b)
+            
+        # Sort year folders and date folders, and sort bookmarks in date folders
+        new_year_folders.sort(key=lambda x: x.title)
+        for yf in new_year_folders:
+            yf.children.sort(key=lambda x: x.title)
+            for df in yf.children:
+                df.children.sort(key=get_pinyin_sort_key)
+                
+        # Target folder's children are the original subfolders plus the new year folders
+        target_folder.children = direct_folders + new_year_folders
+    else:
+        # Just sort direct bookmarks alphabetically/Pinyin in-place
+        direct_bookmarks.sort(key=get_pinyin_sort_key)
+        target_folder.children = direct_folders + direct_bookmarks
+        
+    # 2. Recursively apply to all subfolders of target_folder
+    # We only recurse on the original subfolders (excluding the new year folders)
+    for subfolder in direct_folders:
+        sort_and_restructure_node(subfolder)

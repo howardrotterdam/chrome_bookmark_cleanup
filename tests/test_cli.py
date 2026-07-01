@@ -165,10 +165,9 @@ def test_cli_sort_option(tmp_path, capsys):
     stdout = captured.out
     
     assert "<H3>Folder A</H3>" in stdout
-    assert ">2021</H3>" in stdout
-    assert ">210107</H3>" in stdout
-    assert "百度" in stdout
-    assert "谷歌" in stdout
+    assert "2021" not in stdout
+    # "百度" should come before "谷歌" in the output HTML string
+    assert stdout.find("百度") < stdout.find("谷歌")
 
 
 def test_cli_sort_all_folders(tmp_path, capsys):
@@ -195,4 +194,4 @@ def test_cli_sort_all_folders(tmp_path, capsys):
     
     assert "<H3>Folder A</H3>" in stdout
     assert "<H3>Folder B</H3>" in stdout
-    assert stdout.count(">2021</H3>") == 2
+    assert "2021" not in stdout

@@ -19,7 +19,7 @@ there is no fine control based on bookmark name or add date.
 4. **Flexible Output Formats**: Supports outputting results in standard Chrome HTML format (suitable for immediate re-importing), JSON lists, CSV, or TSV formats.
 5. **Removed Duplicates Log**: Automatically saves the removed duplicate entries to a separate file (e.g., `bookmarks-dups.html` or `bookmarks-dups.json`) next to the output file using the same format.
 6. **Execution Statistics**: Prints detailed summaries of changes (input/output counts, duplicate count, merged count, pruned folder count) directly to `sys.stderr`.
-7. **Folder Restructuring & Sorting**: Restructures a specified bookmark folder (and subfolders) recursively into date-based subfolders (`yyyy/yymmdd`) based on each bookmark's `ADD_DATE`. Under the same date folder, bookmarks are sorted alphabetically. Chinese titles are sorted by case-insensitive Pinyin order.
+7. **Folder Restructuring & Sorting**: Recursively sorts direct bookmarks alphabetically (using case-insensitive Pinyin for Chinese titles) under a specified folder and all its subfolders. If a folder contains 400 or more direct bookmarks, they are restructured into nested date folders (`yyyy/yymmdd`) under that folder based on their `ADD_DATE` (in UTC). For folders with fewer than 400 bookmarks, they are sorted directly in-place.
 
 ## Installation & Build
 
@@ -45,7 +45,7 @@ chrome-bookmark-cleanup <input_file> [options]
 
 - `-o`, `--output <path>`: Path to write the cleaned bookmarks. If not specified, writes to standard output.
 - `-f`, `--format <html|json|csv|tsv>`: Output format (default is `html`).
-- `-s`, `--sort [<folder_path_or_name>]`: Specify a folder path (e.g., `"Bookmarks bar/My Folder"`) or folder title to restructure and sort. If no folder is specified, restructures and sorts all top-level folders.
+- `-s`, `--sort [<folder_path_or_name>]`: Sorts bookmarks in the target folder and its subfolders recursively. If a folder contains 400 or more direct bookmarks, they are restructured into `yyyy/yymmdd` folders under it. Otherwise, they are sorted in-place. If no folder is specified, sorts all folders under the root.
 - `-h`, `--help`: Show usage and help.
 
 ### Examples
@@ -72,7 +72,7 @@ chrome-bookmark-cleanup bookmarks.html -f csv > cleaned.csv
 ```bash
 chrome-bookmark-cleanup bookmarks.html -o cleaned.html --sort "Bookmarks bar/Folder A"
 ```
-*Note: This will restructure all bookmarks inside "Folder A" recursively into "yyyy/yymmdd" subfolders and sort them alphabetically with Chinese text in Pinyin order.*
+*Note: This will recursively sort all bookmarks inside "Folder A" and its subfolders. Any subfolder with 400 or more direct bookmarks will be restructured into "yyyy/yymmdd" subfolders; others will be sorted directly in-place.*
 
 ### Statistics Output Example
 

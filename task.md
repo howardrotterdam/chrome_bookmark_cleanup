@@ -17,13 +17,13 @@
 - [x] Add sorting and Pinyin functionality
     - [x] Update `pyproject.toml` with `pypinyin` dependency
     - [x] Implement folder lookup by name/path in `cleanup.py`
-    - [x] Implement `sort_and_restructure_folder` with `yyyy/yymmdd` and Pinyin alphabetical sorting in `cleanup.py`
+    - [x] Implement `sort_and_restructure_folder` with recursive in-place sorting, 400-bookmark threshold, and Pinyin alphabetical sorting in `cleanup.py`
     - [x] Integrate `--sort` command line option in `main.py`
 - [x] Update Test suite (`tests/`)
-    - [x] Add unit tests for Pinyin sorting and folder restructuring in `test_cleanup.py`
-    - [x] Add CLI integration test for `--sort` option in `test_cli.py`
+    - [x] Add unit tests for threshold-based sorting, recursive subfolders, and Pinyin in `test_cleanup.py`
+    - [x] Add CLI integration test for `--sort` option and threshold checking in `test_cli.py`
 - [x] Update documentation (`README.md`)
-    - [x] Document `--sort` feature, folder structure, and Pinyin sorting
+    - [x] Document `--sort` feature, 400-bookmark threshold, recursion, and Pinyin sorting
 - [x] Verify everything passes
     - [x] Reinstall package to fetch dependencies
     - [x] Run pytest
