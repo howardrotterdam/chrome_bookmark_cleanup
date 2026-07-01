@@ -19,11 +19,11 @@
 
     /* Core Tree Structure & Indentation Guide Lines */
     dl {
-        margin: 0 0 0 24px;   /* Indent children folders */
+        margin: 0 0 0 24px;   /* Structural Indentation */
         padding-left: 0;
     }
     
-    /* Create the vertical tracking line on every nested list container */
+    /* Continuous vertical tracking lines */
     dl dl {
         border-left: 1px solid #ced4da; 
         transition: border-color 0.2s;
@@ -38,24 +38,31 @@
         position: relative;
     }
 
-    /* Folder Typography & Collapsible Mechanics */
-    dt h3 {
-        font-size: 14px;
-        font-weight: 600;
-        margin: 4px 0;
-        padding: 4px 8px;
+    /* Folder Container Layout */
+    .folder-header-container {
         display: inline-flex;
         align-items: center;
         background-color: #e9ecef;
         border-radius: 4px;
+        padding-right: 6px;
+    }
+    .folder-header-container:hover {
+        background-color: #dee2e6;
+    }
+
+    /* Folder Typography & Collapsible Mechanics */
+    dt h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        padding: 4px 8px;
+        display: inline-flex;
+        align-items: center;
         cursor: pointer;
         user-select: none;
     }
-    dt h3:hover {
-        background-color: #dee2e6;
-    }
     
-    /* Add a modern arrow indicator before folder names */
+    /* Modern arrow indicator before folder names */
     dt h3::before {
         content: "▼";
         font-size: 10px;
@@ -65,8 +72,29 @@
         transition: transform 0.15s ease;
     }
 
+    /* Inline Branch Controls Styling */
+    .branch-btn {
+        font-size: 11px;
+        font-family: monospace;
+        font-weight: bold;
+        color: #6c757d;
+        background: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 3px;
+        padding: 1px 4px;
+        margin-left: 4px;
+        cursor: pointer;
+        user-select: none;
+        line-height: 1;
+    }
+    .branch-btn:hover {
+        background-color: #212529;
+        color: #fff;
+        border-color: #212529;
+    }
+
     /* Collapsed State Styles */
-    .collapsed > h3::before {
+    .collapsed > .folder-header-container h3::before {
         transform: rotate(-90deg);
     }
     .collapsed > dl {
@@ -85,9 +113,6 @@
         background-color: #e7f1ff;
         text-decoration: underline;
     }
-    
-    /* Force links to open in a new tab so you don't lose your view */
-    dt a { target: _blank; } 
 </style>
 
 <script>
@@ -96,12 +121,55 @@
         const folders = document.querySelectorAll("dt h3");
         
         folders.forEach(h3 => {
-            const parentDT = h3.parentElement;
+            const parentDT = h3.parentElement; // The current <DT> element wrapping this folder block
             
-            // Toggle collapsed class on click
+            // 1. Wrap the H3 inside a container so we can position buttons neatly next to it
+            const container = document.createElement("span");
+            container.className = "folder-header-container";
+            parentDT.insertBefore(container, h3);
+            container.appendChild(h3);
+
+            // 2. Append the branch-level action buttons
+            const expandBtn = document.createElement("span");
+            expandBtn.className = "branch-btn";
+            expandBtn.innerText = "[+]";
+            expandBtn.title = "Expand all subfolders here";
+            
+            const collapseBtn = document.createElement("span");
+            collapseBtn.className = "branch-btn";
+            collapseBtn.innerText = "[-]";
+            collapseBtn.title = "Collapse all subfolders here";
+
+            container.appendChild(expandBtn);
+            container.appendChild(collapseBtn);
+            
+            // 3. Simple Single Folder Toggle Behavior
             h3.addEventListener("click", (e) => {
                 parentDT.classList.toggle("collapsed");
             });
+
+            // 4. Branch Level Control Logic
+            expandBtn.addEventListener("click", (e) => {
+                e.stopPropagation(); // Prevents triggering single-folder toggle
+                // Make sure parent folder is open, then open all lower child folders inside this scope
+                parentDT.classList.remove("collapsed");
+                parentDT.querySelectorAll("dt").forEach(childDT => {
+                    childDT.classList.remove("collapsed");
+                });
+            });
+
+            collapseBtn.addEventListener("click", (e) => {
+                e.stopPropagation(); // Prevents triggering single-folder toggle
+                // Target all lower child folders inside this scope and collapse them
+                parentDT.querySelectorAll("dt").forEach(childDT => {
+                    childDT.classList.add("collapsed");
+                });
+                // Finally, collapse the parent folder itself
+                parentDT.classList.add("collapsed");
+            });
         });
+
+        // Force all bookmark hyperlinks to open in clean new tabs automatically
+        document.querySelectorAll("dt a").forEach(a => a.setAttribute("target", "_blank"));
     });
 </script>
